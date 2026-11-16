@@ -1,168 +1,132 @@
-# Limits, and where the common plan is wrong
+# 制約と、よくある計画の誤り
 
-Verified against Claude Code documentation, August 2026. Routines and Claude Code on the
-web are both in **research preview**, so specifics move. Re-check before relying on any
-constraint here.
+2026年8月時点の Claude Code ドキュメントと照合済みです。ルーチンとウェブ版 Claude Code はどちらも**リサーチプレビュー**のため、詳細は変わります。ここに記載する制約を前提にする前に、再確認してください。
 
 ---
 
-## 1. There is no GitHub `issues` trigger
+## 1. GitHub の `issues` トリガーはない
 
-**The single most important constraint in this document.**
+**この文書で最も重要な制約です。**
 
-Routine GitHub triggers support two event categories only:
+ルーチンの GitHub トリガーが対応するイベントカテゴリは、次の2つだけです。
 
-| Event | Actions |
+| イベント | アクション |
 |---|---|
-| Pull request | opened, closed, assigned, labeled, synchronized, and other updates |
-| Release | created, published, edited, deleted |
+| プルリクエスト | opened、closed、assigned、labeled、synchronized、その他の更新 |
+| リリース | created、published、edited、deleted |
 
-The canonical factory diagram starts with *new issue arrives → triage agent runs*. **You
-cannot build that with a stock routine.** Every write-up that draws that arrow without
-saying so has not tried it.
+一般的なファクトリーの図は「新しい Issue が届く → トリアージエージェントが動く」から始まります。**標準のルーチンだけでは、この流れを構築できません。** この点を説明せずにその矢印を描いている記事は、実際に試していないということです。
 
-Three ways to close the gap:
+不足を補う方法は3つあります。
 
-| Option | Latency | Cost | Verdict |
+| 選択肢 | 遅延 | コスト | 評価 |
 |---|---|---|---|
-| Scheduled routine polls untriaged issues | up to the interval, min 1 hour | zero extra files | **Default.** Fine for almost every repo |
-| GitHub Action POSTs to the routine's API trigger | seconds | 1 YAML + 1 secret | Use when latency genuinely matters |
-| Ask Claude to triage in a session | immediate | your attention | Not a factory |
+| 定期ルーチンで未トリアージの Issue をポーリングする | 最大で実行間隔分。最短間隔は1時間 | 追加ファイルなし | **既定。** ほぼすべてのリポジトリに十分 |
+| GitHub Action からルーチンの API トリガーへ POST する | 数秒 | YAML 1つ + シークレット1つ | 遅延が本当に重要な場合に使う |
+| セッション内で Claude にトリアージを頼む | 即時 | 人の注意力 | ファクトリーではない |
 
-The template ships option A by default and option B as
-`template/.github/workflows/factory-fire.yml`.
+テンプレートは選択肢 A を既定とし、選択肢 B を `template/.github/workflows/factory-fire.yml` として同梱しています。
 
 ---
 
-## 2. Cloud environment config cannot be committed
+## 2. クラウド環境設定はコミットできない
 
-This is the one real hole in factory-as-code, and it is worth knowing before you design
-around it.
+これは「ファクトリーをコードで管理する」考え方における実質的な穴であり、それを前提とした設計を始める前に知っておく価値があります。
 
-**Committed to the repo, so it works everywhere (terminal, Desktop, cloud, routines):**
+**リポジトリへコミットできるため、どこでも動くもの（ターミナル、Desktop、クラウド、ルーチン）：**
 
 - `CLAUDE.md`
-- `.claude/settings.json`, including hooks
-- `.claude/skills/`, `.claude/agents/`, `.claude/commands/`, `.claude/rules/`
-- `.mcp.json` (project-scope MCP servers)
-- plugins declared in `.claude/settings.json`
+- フックを含む `.claude/settings.json`
+- `.claude/skills/`、`.claude/agents/`、`.claude/commands/`、`.claude/rules/`
+- `.mcp.json`（プロジェクトスコープの MCP サーバー）
+- `.claude/settings.json` で宣言したプラグイン
 
-**Not committed. Account-level UI config you must set by hand:**
+**コミットできず、UI で手動設定するアカウント単位の構成：**
 
-- cloud environment network access level and allowed domains
-- environment variables
-- the setup script
-- routine definitions themselves: prompt, repos, triggers, connectors
+- クラウド環境のネットワークアクセスレベルと許可ドメイン
+- 環境変数
+- セットアップスクリプト
+- ルーチン定義そのもの：プロンプト、リポジトリ、トリガー、コネクター
 
-So a repo can carry its entire factory *behavior* but not its *environment*. Record what you
-pasted into the UI in `CLOUD-ENVIRONMENT.md` in your repo so it is at least version
-controlled as documentation and reproducible on a new machine or by another person.
+つまり、リポジトリはファクトリーの**振る舞い**全体を保持できても、その**環境**は保持できません。UI に貼り付けた内容をリポジトリ内の `CLOUD-ENVIRONMENT.md` に記録し、少なくとも文書としてバージョン管理し、新しいマシンや別の人でも再現できるようにしてください。
 
-Two more gotchas in the same area:
+同じ領域で、さらに2つの注意点があります。
 
-- `~/.claude/skills/`, `~/.claude/agents/`, and your user `CLAUDE.md` do **not** reach cloud
-  sessions. Anything the factory depends on must be in the repo.
-- MCP servers added with `claude mcp add` at local or user scope do not reach cloud
-  sessions either. Use `claude mcp add --scope project` so it writes `.mcp.json`, and commit
-  it. Or add the server as a connector on claude.ai.
+- `~/.claude/skills/`、`~/.claude/agents/`、ユーザーの `CLAUDE.md` は、クラウドセッションに**届きません**。ファクトリーが依存するものはすべてリポジトリに置く必要があります。
+- ローカル／ユーザースコープで `claude mcp add` により追加した MCP サーバーも、クラウドセッションには届きません。`claude mcp add --scope project` を使って `.mcp.json` に書き出し、コミットしてください。または、claude.ai でサーバーをコネクターとして追加します。
 
 ---
 
-## 3. Environment variables are not secrets
+## 3. 環境変数はシークレットではない
 
-The environment settings dialog says so directly: env vars and setup scripts are readable
-by anyone who uses that environment. There is no secrets store yet.
+環境設定ダイアログにも明記されています。環境変数とセットアップスクリプトは、その環境を利用する誰でも読めます。シークレットストアはまだありません。
 
-For GitHub specifically you do not need one. Leave `GH_TOKEN` and `GITHUB_TOKEN` unset and
-the GitHub proxy authenticates for you, keeping the real credential outside the VM. Both
-variables then read as the literal string `proxy-injected`, which matters if you have a
-script that reads `GITHUB_TOKEN` directly: it gets the placeholder, not a usable token.
-`gh` itself works fine.
+GitHub に限れば、シークレットストアは必要ありません。`GH_TOKEN` と `GITHUB_TOKEN` を未設定のままにすると GitHub プロキシが認証を処理し、実際の認証情報を VM の外に保持します。その場合、両変数は文字列 `proxy-injected` として読み取られます。`GITHUB_TOKEN` を直接読むスクリプトがある場合は、この点に注意してください。得られるのは利用可能なトークンではなくプレースホルダーです。`gh` 自体は正常に動きます。
 
 ---
 
-## 4. Green status does not mean the task worked
+## 4. 緑のステータスはタスク成功を意味しない
 
-From the docs, and worth repeating because it is the most likely way to fool yourself:
+誤解を招きやすいため、ドキュメントの説明を改めて示します（日本語訳）。
 
-> A green status in the run list means the session started and exited without an
-> infrastructure error. It does not mean the task in your prompt succeeded.
+> 実行一覧の緑のステータスは、インフラエラーなくセッションが開始・終了したことを意味します。プロンプトで指定したタスクの成功を意味するものではありません。
 
-Blocked network requests, missing connector tools, and outright task failure all show green.
-This is why every execution writes a unique file under `docs/factory/runs/` and why
-`factory-monitor` records what it checked and found clean. Evidence you can inspect beats a
-status light you cannot.
+ネットワーク要求の拒否、コネクターツールの不足、タスク自体の失敗も、すべて緑で表示されます。そのため各実行は `docs/factory/runs/` 配下に固有のファイルを作成し、`factory-monitor` は何を確認し、何に問題がなかったかを記録します。中身を確認できないステータス表示より、確認できる証拠のほうが重要です。
 
 ---
 
-## 5. Routines act as you, with every connector you leave attached
+## 5. ルーチンは接続したすべてのコネクターを使い、あなたとして動く
 
-Commits and PRs carry your GitHub user. Slack messages and Linear tickets use your linked
-accounts. Every connected connector is included by default when you create a routine, and a
-running routine can call every tool from it, writes included, without asking.
+コミットと PR はあなたの GitHub ユーザー名で作成されます。Slack メッセージや Linear チケットには、リンクしたアカウントが使われます。ルーチンの作成時には接続済みコネクターが既定ですべて含まれ、実行中のルーチンは書き込みを含む各コネクターの全ツールを、確認なしで呼び出せます。
 
-Prune connectors per routine. The triage routine needs none.
+ルーチンごとに不要なコネクターを外してください。トリアージルーチンにはコネクターは不要です。
 
 ---
 
-## 6. Other limits worth knowing
+## 6. 知っておくべきその他の制約
 
-| Limit | Value |
+| 制約 | 値 |
 |---|---|
-| Minimum routine schedule interval | 1 hour |
-| Daily routine runs | Capped per account; one-off runs exempt |
-| GitHub webhook events | Per-routine and per-account hourly caps during preview |
-| Branch pushes | `claude/`-prefixed always accepted; others rejected if protected, if someone else has an open PR from them, or if they carry another author's commits |
-| `gh` CLI | Not pre-installed; `apt install -y gh` in the setup script. Built-in GitHub tools cover issues, PRs, diffs, and comments without it |
-| Setup script | Must finish in ~5 minutes; result is cached and rebuilt on change or after ~7 days |
-| Cloud VM | Ubuntu 24.04 x86_64, fresh per session |
-| Session handoff | `--teleport` pulls cloud → local. From the CLI, local → cloud is not a push; `--cloud` starts a *new* session. Desktop's **Continue in** menu can send a local session to the web |
-| Default network | Trusted allowlist only. Reaching your own services needs Custom + explicit domains |
-| IP allowlisting | If your org has it on, every Anthropic-hosted cloud session fails auth |
-| Non-GitHub repos | GitLab and Bitbucket can be sent as a local bundle but cannot push results back |
+| ルーチンの最短実行間隔 | 1時間 |
+| 1日あたりのルーチン実行回数 | アカウントごとに上限あり。単発実行は対象外 |
+| GitHub Webhook イベント | プレビュー期間中はルーチン単位・アカウント単位で1時間あたりの上限あり |
+| ブランチの push | `claude/` で始まるものは常に受け入れられる。それ以外は、保護対象の場合、他の人がそのブランチから PR を開いている場合、または別の著者のコミットを含む場合に拒否される |
+| `gh` CLI | プリインストールされていない。セットアップスクリプトで `apt install -y gh` を実行する。組み込み GitHub ツールなら `gh` なしで Issue、PR、差分、コメントを扱える |
+| セットアップスクリプト | 約5分以内に完了する必要がある。結果はキャッシュされ、変更時または約7日後に再構築される |
+| クラウド VM | Ubuntu 24.04 x86_64。セッションごとに新規作成 |
+| セッションの引き継ぎ | `--teleport` はクラウドからローカルへ取り込む。CLI ではローカルからクラウドへの push はなく、`--cloud` は**新規**セッションを開始する。Desktop の **Continue in** メニューならローカルセッションをウェブへ送れる |
+| 既定ネットワーク | 信頼済み許可リストのみ。自分のサービスへ接続するには Custom と明示的なドメイン指定が必要 |
+| IP 許可リスト | 組織で有効になっていると、Anthropic がホストするクラウドセッションはすべて認証に失敗する |
+| GitHub 以外のリポジトリ | GitLab と Bitbucket はローカルバンドルとして送信できるが、結果を push して戻せない |
 
 ---
 
-## 7. Corrections to the widely circulated plan
+## 7. 広く出回っている計画への訂正
 
-The Grok-authored plan is directionally right. Specific errors:
+Grok が作成した計画は、方向性としては正しいものです。具体的な誤りは次のとおりです。
 
-| Claim | Reality |
+| 主張 | 実際 |
 |---|---|
-| "Routines available on Max" | Pro, Max, Team, **and** Enterprise, all requiring Claude Code on the web enabled |
-| "GitHub events (PR opened, **issue created**) for triage" | **No issue trigger exists.** Pull request and release only. This is the load-bearing error, because it is the entire first stage of the factory |
-| "Use `claude --cloud` for sessions that continue after you disconnect" | Correct, but `--cloud` with a task **creates a new** cloud session. It does not push your current local session to the cloud. Only Desktop's **Continue in** menu does that |
-| "Layer Agent SDK + Temporal/Prefect + E2B/Modal orchestration" | Unnecessary for a personal or single-team factory. Routines already provide schedule, API, and GitHub triggers on managed infrastructure. Reach for an SDK only when you need non-GitHub triggers or state that will not fit in repo files |
-| "Model routing: cheap models for triage, strong for implementation" | Sound, but a routine's model is a single selector on the prompt, applied to every run. Per-stage routing means **separate routines per stage**, which the design here already does |
-| "Docker sandboxes / K8s for isolation" | Cloud sessions already run in isolated per-session VMs with a credential proxy. Adding your own is duplicated work unless you have a compliance reason |
-| "ROI tracking: log tokens, duration, outcome" | Nothing stock emits a complete record. Unique run files plus issue and PR timestamps provide useful quality and throughput measures; precise token-cost accounting remains additional infrastructure |
+| 「ルーチンは Max で利用可能」 | Pro、Max、Team、**Enterprise でも**利用可能。いずれもウェブ版 Claude Code の有効化が必要 |
+| 「トリアージには GitHub イベント（PR 作成、**Issue 作成**）を使う」 | **Issue トリガーは存在しない。** プルリクエストとリリースのみ。ファクトリーの最初の段階全体に関わるため、これが最も重大な誤り |
+| 「接続を切った後も継続するセッションには `claude --cloud` を使う」 | 正しいが、タスク付きの `--cloud` は**新しい**クラウドセッションを作る。現在のローカルセッションをクラウドへ送るのではない。それができるのは Desktop の **Continue in** メニューだけ |
+| 「Agent SDK + Temporal/Prefect + E2B/Modal のオーケストレーションを重ねる」 | 個人または単一チームのファクトリーには不要。ルーチンはすでにマネージド基盤上でスケジュール、API、GitHub トリガーを提供する。GitHub 以外のトリガーや、リポジトリのファイルに収まらない状態が必要な場合にだけ SDK を検討する |
+| 「モデルルーティング：トリアージには安価なモデル、実装には強力なモデル」 | 妥当だが、ルーチンのモデルはプロンプト上の単一の選択項目で、全実行に適用される。段階別に振り分けるには**段階ごとに別ルーチン**が必要で、この設計ではすでにそうしている |
+| 「分離には Docker サンドボックス／K8s を使う」 | クラウドセッションはすでに認証情報プロキシ付きの、セッションごとに分離された VM で動く。コンプライアンス上の理由がない限り、独自に加えるのは二重作業 |
+| 「ROI 追跡：トークン数、所要時間、結果を記録する」 | 標準機能では完全な記録を出力できない。固有の実行ファイルと Issue／PR のタイムスタンプで品質と処理量の有用な指標は得られるが、正確なトークンコスト集計には追加の基盤が必要 |
 
-**The bigger disagreement is one of framing.** That plan optimizes for a large organization
-standardizing many developers: governance, cost control, reducing human variability. That
-framing is coherent *for that audience*.
+**より大きな相違は、問題の捉え方です。** その計画は、多数の開発者を標準化する大規模組織に向けて、ガバナンス、コスト管理、人によるばらつきの削減を最適化しています。**その対象にとっては**一貫した捉え方です。
 
-For a portfolio of personal, open-source, and client repos, the constraint is different.
-Human variability is not the problem, because there is one human. The problem is that one
-human's review attention is the entire quality apparatus, with no org backstop behind it.
-That points at a different design: fewer moving parts, everything in the repo, and hard
-structural limits on how much work can be pending your judgment at once.
+個人、オープンソース、顧客向けの複数リポジトリを管理する場合、制約は異なります。人は1人なので、人によるばらつきが問題ではありません。問題は、1人のレビューに割ける注意力が品質保証のすべてであり、それを支える組織的な後ろ盾がないことです。だからこそ、構成要素を減らし、すべてをリポジトリに置き、同時に判断待ちにできる作業量に厳密な構造上の制限を設ける、別の設計が必要になります。
 
-Which is why this reference has no orchestrator, queue service, or dashboard. It has a
-shared contract, thin Claude/Codex adapters, five workflow skills, two review roles,
-fail-closed gates, run records, and five Claude routines.
+このリファレンスにオーケストレーター、キューサービス、ダッシュボードがないのはそのためです。あるのは共通契約、薄い Claude／Codex アダプター、5つのワークフロースキル、2つのレビュー役割、判断できない場合は停止するゲート、実行記録、そして5つの Claude ルーチンです。
 
 ---
 
-## 8. What this reference deliberately does not do
+## 8. このリファレンスが意図的に行わないこと
 
-- **No auto-merge on any tier.** Enforced by repository branch rules; hooks add defense in depth.
-- **No ROI or token dashboard.** Nothing stock emits the data; building it is a project.
-- **No custom multi-harness orchestration layer.** Claude Code is primary. Codex receives
-  project instructions, skill wrappers, and a hook adapter over the same repository
-  contract. Claude cloud routine definitions are not translated automatically into Codex
-  automations.
-- **No custom orchestrator.** If you outgrow routines, the next step is the Claude Agent
-  SDK, not Temporal.
-- **No vendor platform.** By request. The tradeoff is that steering, handoff, and
-  notifications are thinner here than a dedicated product provides: you get `--teleport`,
-  `/tasks`, and PR comments rather than a control room.
+- **どのティアでも自動マージは行いません。** リポジトリのブランチルールで強制し、フックで多層防御を加えます。
+- **ROI やトークンのダッシュボードはありません。** 標準機能ではデータを出力できず、構築するには別の開発が必要です。
+- **複数ハーネス向けの独自オーケストレーション層はありません。** 主体は Claude Code です。Codex には、同じリポジトリ契約に基づくプロジェクト指示、スキルラッパー、フックアダプターを用意します。Claude のクラウドルーチン定義を Codex の自動化へ自動変換することはありません。
+- **独自オーケストレーターはありません。** ルーチンの限界を超えた場合の次の選択肢は、Temporal ではなく Claude Agent SDK です。
+- **ベンダー製プラットフォームは使いません。** 要望に基づく選択です。その代わり、操作指示、引き継ぎ、通知の機能は専用製品より限定的です。コントロールルームではなく、`--teleport`、`/tasks`、PR コメントを使います。

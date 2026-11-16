@@ -1,34 +1,32 @@
-# OPTIONAL. Only add this if you want issue-driven triage to be immediate.
+# 任意。Issue起点のトリアージを即時実行したい場合にだけ追加します。
 #
-# Why this file exists: Claude Code routines support GitHub triggers for
-# `pull_request` and `release` events ONLY. There is no `issues` trigger. So the
-# canonical factory flow (new issue -> triage agent) cannot be event-driven with a
-# stock routine alone.
+# このファイルが必要な理由: Claude Codeのルーチンが対応するGitHubトリガーは
+# pull_requestとreleaseイベントのみです。issuesトリガーはありません。
+# そのため標準ルーチンだけでは「新規Issue→トリアージ」の正規フローを
+# イベント駆動にできません。
 #
-# Two ways to close that gap:
+# 補う方法は2つあります:
+# A. 未トリアージのIssueを定期ルーチンでポーリングする。
+#    既定の方式で標準機能だけを使い、追加ファイル不要。遅延は最大1時間。
+#    まずはこちらから始めてください。
+# B. このGitHub Actionで、Issue作成時にルーチンのAPIトリガーへPOSTする。
+#    ほぼ即時に実行できますが、YAMLファイル1つとシークレット1つが必要です。
 #
-#   A. Scheduled routine that polls for untriaged issues.  <- default, fully stock,
-#      zero extra files, up to an hour of latency. Start here.
+# Bはトリアージの遅延が本当に問題になる場合だけ使ってください。
+# 個人用・新規開発のリポジトリでは通常不要です。Aなら追加の非標準要素は不要です。
 #
-#   B. This file: a GitHub Action that POSTs to a routine's API trigger the moment
-#      an issue is opened. Near-instant, costs one YAML file and one secret.
+# Bの設定:
+# 1. claude.ai/code/routinesでトリアージルーチンを作成（ROUTINES.md参照）。
+# 2. 編集してAPIトリガーを追加し、トークンを生成。一度しか表示されません。
+# 3. リポジトリのシークレットを追加:
+#      CLAUDE_ROUTINE_URL    ルーチンの/fireエンドポイントURL
+#      CLAUDE_ROUTINE_TOKEN  Bearerトークン
+# 4. このファイルをコミット。
 #
-# Use B only if triage latency actually matters to you. For a personal or greenfield
-# repo it almost never does, and A keeps the factory to zero non-stock parts.
-#
-# Setup for B:
-#   1. Create the triage routine at claude.ai/code/routines (see ROUTINES.md).
-#   2. Edit it, add an API trigger, generate a token. The token is shown once.
-#   3. Add repo secrets:
-#        CLAUDE_ROUTINE_URL    the /fire endpoint URL for that routine
-#        CLAUDE_ROUTINE_TOKEN  the bearer token
-#   4. Commit this file.
-#
-# Note on the routine prompt: `text` sent here arrives wrapped in a
-# <routine-fire-payload> block explicitly labelled as untrusted data. The routine's
-# saved prompt must reference the payload for it to be acted on at all. That wrapper
-# is a feature: anyone holding the token can send text, so it arrives as data rather
-# than as instructions. Do not try to defeat it.
+# プロンプトについて: ここから送るtextは、信頼できないデータと明示した
+# <routine-fire-payload>ブロックで届きます。処理させるには保存済みプロンプトから
+# ペイロードを参照する必要があります。トークンを持つ誰もがテキストを送れるため、
+# 指示ではなくデータとして届くこの仕組みは意図的なものです。迂回しないでください。
 
 name: factory-fire
 
@@ -43,10 +41,10 @@ permissions:
 jobs:
   fire:
     runs-on: ubuntu-latest
-    # Skip issues the factory itself filed, or the monitor loops on its own output.
+    # ファクトリー自身のIssueは除外し、モニターの自己出力によるループを防ぎます。
     if: ${{ !contains(github.event.issue.labels.*.name, 'factory:monitor') }}
     steps:
-      - name: Trigger triage routine
+      - name: トリアージルーチンの起動
         env:
           URL: ${{ secrets.CLAUDE_ROUTINE_URL }}
           TOKEN: ${{ secrets.CLAUDE_ROUTINE_TOKEN }}
@@ -55,14 +53,14 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           if [ -z "$URL" ] || [ -z "$TOKEN" ]; then
-            echo "Routine secrets not configured; skipping. Scheduled triage will pick this up."
+            echo "ルーチンのシークレットが未設定のためスキップします。定期トリアージが処理します。"
             exit 0
           fi
 
-          # Pass only the identifier. The routine fetches the issue itself with the
-          # built-in GitHub tools, so untrusted issue body text never travels as the
-          # payload and the routine reads it in its normal, guarded way.
-          PAYLOAD=$(jq -nc --arg t "Triage issue #${NUMBER} (\"${TITLE}\") in ${REPO}." '{text:$t}')
+          # 識別情報だけを渡します。ルーチンは組み込みGitHubツールでIssueを取得します。
+          # 信頼できないIssue本文をペイロードに載せず、通常の保護された手順で
+          # 読み取れるようにします。
+          PAYLOAD=$(jq -nc --arg t "${REPO} のIssue #${NUMBER}（\"${TITLE}\"）をトリアージしてください。" '{text:$t}')
 
           curl -sS -X POST "$URL" \
             -H "Authorization: Bearer ${TOKEN}" \

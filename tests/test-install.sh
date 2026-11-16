@@ -19,16 +19,16 @@ for path in \
   docs/factory/README.md \
   docs/factory/CONTRACT.md \
   docs/factory/runs/README.md; do
-  [ -e "$fixture/$path" ] || { echo "missing installed file: $path" >&2; exit 1; }
+  [ -e "$fixture/$path" ] || { echo "インストールされたファイルがありません: $path" >&2; exit 1; }
 done
 
 [ ! -e "$fixture/.github/workflows/factory-fire.yml" ] || {
-  echo "optional issue trigger installed without flag" >&2
+  echo "フラグ未指定なのに任意のIssueトリガーがインストールされました" >&2
   exit 1
 }
 
 second_run="$($ROOT/install.sh "$fixture")"
-printf '%s' "$second_run" | grep -q 'created: 0'
+printf '%s' "$second_run" | grep -q '作成: 0'
 
 "$ROOT/install.sh" --with-issue-trigger "$fixture" >/dev/null
 [ -f "$fixture/.github/workflows/factory-fire.yml" ]

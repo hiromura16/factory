@@ -1,13 +1,12 @@
-# Factory charter
+# Factory憲章
 
-**This file is the human judgment, upstream.** Every factory skill reads it before acting.
-It is the primary policy file a human must review, and an agent must never edit it on its
-own initiative.
+**このファイルには、作業に先立つ人間の判断を記します。** すべてのFactoryスキルは作業前に読みます。
+人間が確認すべき主要なポリシーファイルであり、エージェントが独断で編集してはいけません。
 
-Fill it in once per repo. Revisit it deliberately (see "Constraint review" at the bottom),
-not continuously.
+リポジトリごとに一度記入します。常時変更するのではなく、
+意図的に見直してください（末尾の「制約の見直し」を参照）。
 
-Set this to `ready` only after reviewing every section:
+すべての節を確認してから、次の値を `ready` に設定します。
 
 ```
 CHARTER_STATUS: incomplete
@@ -15,31 +14,32 @@ CHARTER_STATUS: incomplete
 
 ---
 
-## 1. Tier
+## 1. 運用区分
 
-Delete all but one. This single choice sets how much autonomy every routine gets.
+1つだけ残して削除します。この選択が、すべてのルーチンに許す自律性を決めます。
 
-| Tier | Means | Autonomy |
+| 区分 | 意味 | 自律性 |
 |---|---|---|
-| `revival` | Unlaunched, no users, no revenue. Migration and resurrection work. | Widest. Long runs, wide fan-out, human reads samples not diffs. |
-| `greenfield` | Personal project, users not yet depending on it. | Wide. Gates carry it; human samples. |
-| `oss` | Published, other people depend on it, contributions arrive. | Moderate. Agent ranks attention, human owns every merge. |
-| `client-production` | Someone else's business depends on this. | Narrow. Short loops, no unattended merges, everything read. |
+| `revival` | 未公開、ユーザーも売上もない。移行・再生作業。 | 最も広い。長時間実行と広い並列展開を許し、人間は全差分ではなくサンプルを読む。 |
+| `greenfield` | 個人プロジェクトで、まだ依存するユーザーがいない。 | 広い。ゲートを中心に判断し、人間はサンプルを確認する。 |
+| `oss` | 公開済みで他者が依存し、コントリビューションが届く。 | 中程度。エージェントが注意を向ける順序を決め、すべてのマージを人間が判断する。 |
+| `client-production` | 他者の事業が依存している。 | 狭い。短いループで進め、無人マージは禁止し、すべて目視確認する。 |
 
 ```
 TIER: <choose one tier>
 ```
 
-**Why the tier and not the difficulty:** autonomy tracks who gets hurt when it is wrong.
-A ten-thousand-line migration on an unlaunched project is a safer bet than a fifty-line
-change to a client's auth path.
+**難易度ではなく区分で決める理由:** 自律性は、誤った場合に誰が被害を受けるかに合わせます。
+未公開プロジェクトの1万行の移行より、顧客の認証処理に対する50行の変更の方が
+危険な場合があります。
 
 ---
 
-## 2. Load-bearing paths
+## 2. 重要パス
 
-Globs that no routine may modify unattended, regardless of tier. A change touching any of
-these is forced to `deep` gates and a human read, and may never be auto-merged.
+区分にかかわらず、どのルーチンも無人で変更してはならないglobです。
+いずれかに触れる変更には `deep` ゲートと人間の目視確認を必須とし、
+自動マージしてはいけません。
 
 ```
 LOAD_BEARING:
@@ -55,78 +55,79 @@ LOAD_BEARING:
   - "AGENTS.md"
 ```
 
-`.claude/**` is on the list on purpose. An agent that can rewrite the factory's own rules
-has no constraints at all.
+`.claude/**` を含めているのは意図的です。Factory自身のルールを書き換えられる
+エージェントには、実質的に制約がありません。
 
 ---
 
-## 3. Test-file rule
+## 3. テストファイルのルール
 
 ```
 TESTS_ARE_LOAD_BEARING: true
 ```
 
-When true, an unattended run may not modify an existing test file. An interactive session
-may do so only after explicit human approval, and the resulting draft PR requires a human
-read even when every gate is green. Agents routinely rewrite assertions to match broken
-behavior, so an unexplained green suite after an agent edited the tests is weak evidence.
+trueの場合、無人実行では既存のテストファイルを変更できません。
+対話セッションでは人間の明示的な承認を得た場合に限り変更できます。
+すべてのゲートが合格でも、作成したドラフトPRには人間の目視確認が必要です。
+エージェントは壊れた挙動に合わせてアサーションを書き換えがちなので、
+テスト変更後に理由の説明なく全テストが合格しても、証拠としては弱いものです。
 
-Adding a *new* test file is not covered by this rule.
+*新しい*テストファイルの追加は、このルールの対象外です。
 
 ---
 
-## 4. What is automatable here
+## 4. ここで自動化できること
 
-The triage skill uses this to decide `ready-to-implement` versus `ready-to-spec`.
-Be specific. Vague entries produce vague triage.
+トリアージスキルは、これを使って `ready-to-implement` と `ready-to-spec` を判断します。
+具体的に記述してください。曖昧な記述からは曖昧なトリアージが生まれます。
 
 ```
 AUTOMATABLE:
-  - Dependency bumps that pass full gates
-  - Lint, format, and type-only fixes
-  - Documentation and comment corrections
-  - Test coverage added to existing untested functions
-  - Single-file bug fixes with a reproducible failing test
-  - Mechanical migration steps listed in docs/factory/MIGRATION.md
+  - fullゲートに合格する依存関係の更新
+  - lint、整形、型だけの修正
+  - 文書とコメントの訂正
+  - 既存の未テスト関数へのテストカバレッジ追加
+  - 再現可能な失敗テストがある単一ファイルのバグ修正
+  - docs/factory/MIGRATION.mdに記載された機械的な移行手順
 
 NEEDS_SPEC:
-  - Anything adding a user-visible feature
-  - Anything changing a public API or exported type signature
-  - Anything touching more than 5 files
-  - Anything a load-bearing path
+  - ユーザーから見える機能を追加するもの
+  - 公開APIまたはエクスポートされた型のシグネチャを変更するもの
+  - 5ファイルを超えて変更するもの
+  - 重要パスに触れるもの
 
 NEVER_AUTOMATE:
-  - Merge decisions
-  - Architectural direction and dependency choices
-  - Product intent: whether a feature should exist at all
-  - Anything the charter does not cover (default deny)
+  - マージの判断
+  - アーキテクチャの方向性と依存関係の選択
+  - 機能がそもそも必要かというプロダクトの意図
+  - 憲章の対象外のものすべて（デフォルト拒否）
 ```
 
-The last line matters. Silence in this file means stop, not proceed.
+最後の行は重要です。このファイルに記載がなければ、先に進まず停止します。
 
 ---
 
-## 5. Definition of done
+## 5. 完了の定義
 
-An item may only move to `verified` when all of these hold. The verify skill checks each
-one independently and does not accept the implementer's word on any of them.
+次をすべて満たす場合に限り、項目を `verified` に移せます。
+検証スキルは各項目を独立して確認し、実装担当者の申告だけでは認めません。
 
 ```
 DONE:
-  - gates.sh reports FACTORY_GATES status=GREEN at the required level
-  - The change is covered by a test that fails without it
-  - No existing test file was modified, or an interactive human explicitly approved it
-    and the draft PR is flagged for human read
-  - The diff does the one thing the queue item describes and nothing else
-  - A human can read the PR body and understand why this is safe
+  - gates.shが必須レベルでFACTORY_GATES status=GREENを報告する
+  - 変更がなければ失敗するテストで、その変更が検証されている
+  - 既存テストファイルが未変更、または対話中に人間が明示的に承認し、
+    ドラフトPRに人間の目視確認が必要と明記されている
+  - 差分はキュー項目が説明する1つのことだけを行い、それ以外を含まない
+  - 人間がPR本文を読めば、なぜ安全なのか理解できる
 ```
 
-That last criterion is the answerability bar. On `client-production` it means explainable
-in six months by someone who is not you, which is tighter than verifiable today.
+最後の基準は、説明責任を果たせるかの基準です。`client-production` では、
+自分以外の誰かが6か月後にも説明できることを意味し、今日検証できることより厳しい条件です。
 
 ---
 
-## 6. Gate level by change type
+## 6. 変更種別ごとのゲートレベル
 
 ```
 GATES:
@@ -137,34 +138,34 @@ GATES:
 
 ---
 
-## 7. Stop conditions
+## 7. 停止条件
 
-The factory halts and asks for a human when any of these is true. This is the back-pressure
-valve. It exists so that a routine cannot grind through a bad assumption at volume.
+次のいずれかに該当すると、Factoryは停止して人間に確認します。
+これは処理を抑制する安全弁です。ルーチンが誤った前提のまま大量の作業を進めることを防ぎます。
 
 ```
 STOP_IF:
-  - Gates were red twice in a row on the same item
-  - The fix requires touching a load-bearing path
-  - The change would exceed 400 changed lines
-  - The queue item is ambiguous after one clarification attempt
-  - More than 3 items are already awaiting human review
+  - 同じ項目でゲートが2回連続して赤になった
+  - 修正に重要パスへの変更が必要
+  - 変更行数が400行を超える
+  - 1回確認を試みてもキュー項目が曖昧なまま
+  - すでに3件を超える項目が人間のレビューを待っている
 ```
 
-The last one is the orchestration-tax limit. The constraint on a factory is not how many
-agents can run, it is how many decisions can be pending your judgment at once. When the
-review queue is full, stop producing.
+最後の条件は、調整にかかる負担の上限です。Factoryの制約は稼働できるエージェント数ではなく、
+人間の判断を同時にいくつ待てるかです。レビュー待ちキューが満杯なら、
+成果物を増やすのを止めてください。
 
 ---
 
-## 8. Constraint review
+## 8. 制約の見直し
 
-Constraints set once become either a permanent tax or a permanent hole. Review this file:
+一度設定した制約は、永続的な負担にも、永続的な抜け穴にもなります。このファイルを見直してください。
 
-- **Loosen** when a class of change has been green across a long enough run, and record
-  the run of evidence in `docs/factory/DECISIONS.md`.
-- **Tighten** immediately when an escaped defect traces back to an automated gate you
-  trusted. Record what the gate missed.
+- ある種類の変更が十分な期間にわたり合格してきたら**緩和**し、
+  一連の証拠を `docs/factory/DECISIONS.md` に記録します。
+- 信頼していた自動ゲートをすり抜けた欠陥が判明したら、直ちに**強化**します。
+  ゲートが何を見逃したかを記録してください。
 
 ```
 LAST_REVIEWED: <YYYY-MM-DD>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Check whether the installed factory has enough configuration to run safely.
+# インストール済みファクトリーに、安全な実行に必要な設定があるか確認します。
 
 set -uo pipefail
 
@@ -23,49 +23,49 @@ required_files=(
 )
 
 for path in "${required_files[@]}"; do
-  [ -f "$path" ] && pass "$path exists" || fail "$path is missing"
+  [ -f "$path" ] && pass "$path が存在します" || fail "$path がありません"
 done
 
 if [ -f CLAUDE.md ] && grep -q '<PROJECT NAME>\|<install>\|<One paragraph:' CLAUDE.md; then
-  fail "CLAUDE.md still contains setup placeholders"
+  fail "CLAUDE.md に設定用プレースホルダーが残っています"
 else
-  pass "CLAUDE.md placeholders replaced"
+  pass "CLAUDE.md のプレースホルダーは置換済みです"
 fi
 
 if [ -f docs/factory/CHARTER.md ] && grep -q '^CHARTER_STATUS: ready$' docs/factory/CHARTER.md; then
-  pass "charter is marked ready"
+  pass "憲章はreadyに設定されています"
 else
-  fail "charter is not marked ready"
+  fail "憲章がreadyに設定されていません"
 fi
 
 if [ -f docs/factory/CHARTER.md ] && grep -q '^TIER: \(revival\|greenfield\|oss\|client-production\)$' docs/factory/CHARTER.md; then
-  pass "charter tier is valid"
+  pass "憲章のtierは有効です"
 else
-  fail "charter tier is missing or invalid"
+  fail "憲章のtierが未設定または無効です"
 fi
 
 if git rev-parse --git-dir >/dev/null 2>&1; then
-  pass "Git repository detected"
-  if git remote get-url origin >/dev/null 2>&1; then pass "origin remote detected"; else warn "no origin remote"; fi
+  pass "Gitリポジトリを検出しました"
+  if git remote get-url origin >/dev/null 2>&1; then pass "originリモートを検出しました"; else warn "originリモートがありません"; fi
 else
-  fail "not a Git repository"
+  fail "Gitリポジトリではありません"
 fi
 
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-  pass "GitHub CLI authenticated"
+  pass "GitHub CLIは認証済みです"
   missing_labels=0
   for label in factory:ready-to-implement factory:ready-to-spec factory:needs-info factory:wait-to-implement factory:in-progress factory:awaiting-review; do
     gh label view "$label" >/dev/null 2>&1 || missing_labels=$((missing_labels + 1))
   done
-  [ "$missing_labels" -eq 0 ] && pass "live queue labels exist" || warn "$missing_labels live queue labels missing; run ./.factory/scripts/bootstrap-github.sh --apply"
+  [ "$missing_labels" -eq 0 ] && pass "稼働キューのラベルが存在します" || warn "稼働キューのラベルが $missing_labels 個不足しています。次を実行してください: ./.factory/scripts/bootstrap-github.sh --apply"
 else
-  warn "gh is unavailable or unauthenticated; live queue checks skipped"
+  warn "ghが未導入または未認証のため、稼働キューの検査をスキップしました"
 fi
 
 if [ -f .codex/hooks.json ]; then
-  warn "Codex users must review and trust repo hooks with /hooks"
+  warn "Codex利用者は/hooksでリポジトリのフックを確認し、信頼を承認する必要があります"
 fi
-warn "verify GitHub branch protection or a ruleset manually; see docs/factory/GITHUB.md"
+warn "GitHubのブランチ保護またはルールセットを手動で確認してください。docs/factory/GITHUB.mdを参照"
 
 printf '\nFACTORY_DOCTOR: failures=%d warnings=%d\n' "$failures" "$warnings"
 [ "$failures" -eq 0 ]

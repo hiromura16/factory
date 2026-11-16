@@ -1,11 +1,7 @@
-# Contributor guidance for Codex
+# Codex向けのコントリビューターガイド
 
-Read `CLAUDE.md` before changing this repository. It contains the project map, validation
-commands, and rules for keeping the Claude and Codex paths aligned.
+このリポジトリを変更する前に`CLAUDE.md`を読んでください。プロジェクトの構成、検証コマンド、ClaudeとCodexの経路の整合性を保つためのルールが記載されています。
 
-This root `AGENTS.md` is for developing the reference project. The file installed into user
-repositories is `template/AGENTS.md`; do not merge their responsibilities.
+このルートの`AGENTS.md`は参照プロジェクトの開発用です。利用者のリポジトリへインストールするファイルは`template/AGENTS.md`です。両者の責務を混同しないでください。
 
-Run `bash tests/run.sh` before committing. For documentation changes, follow the desktop
-paths in `GETTING_STARTED.md` as a new user would and keep product-specific claims linked to
-official documentation.
+コミット前に`bash tests/run.sh`を実行してください。文書を変更する場合は、新規利用者の視点で`GETTING_STARTED.md`のデスクトップ向け手順をたどり、製品固有の記述には公式文書へのリンクを維持してください。

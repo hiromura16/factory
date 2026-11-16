@@ -1,258 +1,183 @@
-# Architecture
+# アーキテクチャ
 
-Why this is shaped the way it is, what it borrows, and where it deliberately departs.
+この構成を選んだ理由、参考にした考え方、そして意図的に異なる設計にした点を説明します。
 
 ---
 
-## The bet
+## 設計の大前提
 
-**Everything the factory needs lives in the repository.**
+**ファクトリーに必要なものは、すべてリポジトリに置きます。**
 
-Cloud sessions start from a fresh clone. Whatever is committed is available; whatever lives
-only on your machine is not. That single fact determines the entire design:
+クラウドセッションは毎回新しいクローンから始まります。コミット済みのものは利用できますが、手元のマシンにしかないものは利用できません。この事実が設計全体を決めています。
 
-| Committed, works everywhere | Machine-local, invisible to cloud |
+| コミット済みで、どこでも使えるもの | マシンローカルで、クラウドから見えないもの |
 |---|---|
 | `CLAUDE.md` | `~/.claude/CLAUDE.md` |
-| `.claude/skills/`, `agents/`, `commands/`, `rules/` | `~/.claude/skills/` etc. |
-| `.claude/settings.json` and its hooks | user-scoped `enabledPlugins` |
-| `AGENTS.md`, `.agents/skills/`, `.codex/hooks.json` | user-scoped Codex instructions and skills |
-| `docs/factory/CONTRACT.md`, `.factory/` | shell history and uncommitted local scripts |
-| `.mcp.json` (project scope) | `claude mcp add` at local or user scope |
-| `docs/factory/*` | anything in your shell history |
+| `.claude/skills/`, `agents/`, `commands/`, `rules/` | `~/.claude/skills/` など |
+| `.claude/settings.json` とそのフック | ユーザースコープの `enabledPlugins` |
+| `AGENTS.md`, `.agents/skills/`, `.codex/hooks.json` | ユーザースコープの Codex 指示とスキル |
+| `docs/factory/CONTRACT.md`, `.factory/` | シェル履歴と未コミットのローカルスクリプト |
+| `.mcp.json`（プロジェクトスコープ） | ローカル／ユーザースコープの `claude mcp add` |
+| `docs/factory/*` | シェル履歴にしかない情報 |
 
-The shared contract, gates, queue labels, and run records drive both harnesses. Claude Code
-adds cloud routines and sessions; Codex adds project instructions, repo skills, and trusted
-hooks. There is no second policy document to keep in sync.
+共通契約、ゲート、キューラベル、実行記録を両方のハーネスで使います。Claude Code はクラウドルーチンとセッションを、Codex はプロジェクト指示、リポジトリスキル、信頼済みフックを提供します。同期すべき別のポリシー文書はありません。
 
-The one exception is the cloud environment itself (network, env vars, setup script) and the
-routine definitions. Those are account-level UI state. See [LIMITS.md](LIMITS.md) §2.
+唯一の例外は、クラウド環境そのもの（ネットワーク、環境変数、セットアップスクリプト）とルーチン定義です。これらはアカウント単位の UI 設定です。[LIMITS.md](LIMITS.md) の第2節を参照してください。
 
 ---
 
-## Mapping to the factory loop
+## ファクトリーのループとの対応
 
-A useful end-to-end loop is `triage → spec → implement → review → verify → ship → monitor`.
-Here is what each stage is built from, using only stock parts.
+端から端までの有用なループは `triage → spec → implement → review → verify → ship → monitor` です。標準機能だけで、各段階を次のように構成します。
 
-| Stage | Mechanism | Surface | Human? |
+| 段階 | 仕組み | 実行場所 | 人の関与 |
 |---|---|---|---|
-| Triage | `factory-triage` skill + scheduled routine | Cloud | Reads the snapshot PR |
-| Spec | `factory-spec` skill, four explicit gates | **Desktop, interactive** | **Approves each gate** |
-| Implement | `factory-implement` skill + scheduled routine or `--cloud` | Cloud | No |
-| Review | `factory-verifier` subagent, in-session | Cloud | No |
-| Verify | `factory-verify` skill + `pull_request.opened` routine | Cloud | No |
-| Ship | **Human merges.** Enforced by repository branch rules | Anywhere | **Yes, always** |
-| Monitor | `factory-monitor` skill + weekly routine | Cloud | Reads findings |
+| トリアージ | `factory-triage` スキル + 定期ルーチン | クラウド | スナップショット PR を読む |
+| 仕様策定 | `factory-spec` スキル、明示的な4つのゲート | **Desktop、対話型** | **各ゲートを承認する** |
+| 実装 | `factory-implement` スキル + 定期ルーチンまたは `--cloud` | クラウド | なし |
+| レビュー | セッション内の `factory-verifier` サブエージェント | クラウド | なし |
+| 検証 | `factory-verify` スキル + `pull_request.opened` ルーチン | クラウド | なし |
+| 出荷 | **人がマージする。** リポジトリのブランチルールで強制 | 任意 | **常に必要** |
+| 監視 | `factory-monitor` スキル + 週次ルーチン | クラウド | 検出内容を読む |
 
-Two stages are deliberately not automatable. Spec is where product intent and system shape
-get decided, and those are the judgments that no oracle grades. Ship is where accountability
-lives.
+2つの段階は意図的に自動化できない設計です。仕様策定ではプロダクトの意図とシステムの形を決めますが、その判断を採点できる正解判定基準はありません。出荷では責任の所在を明確にします。
 
 ---
 
-## Where this reference deliberately departs
+## このリファレンスが意図的に異なる点
 
-Organization-scale factory designs usually optimize for governance, cost control, and
-reducing variability across many developers. Those are sensible priorities for that audience.
+組織規模のファクトリー設計では通常、ガバナンス、コスト管理、多数の開発者間のばらつきの削減を優先します。その対象には妥当な優先順位です。
 
-A personal or small-team factory has a different binding constraint. There is one human, so
-variability is not the problem. The problem is that **one person's review attention is the
-entire quality apparatus, with no organizational backstop behind it** - no review culture,
-no SRE, no second pair of eyes that catches things by accident.
+個人や小規模チームのファクトリーでは、制約になるものが異なります。人は1人なので、ばらつきが問題なのではありません。問題は、**1人のレビューに割ける注意力が品質保証のすべてであり、それを支える組織的な後ろ盾がない**ことです。レビュー文化も SRE も、偶然見落としを発見してくれる別の目もありません。
 
-Four consequences:
+ここから4つの結論が導かれます。
 
-**1. No orchestrator.** Routines already provide schedule, API, and GitHub triggers on
-managed infrastructure. A queue service, Temporal, or a custom worker adds operational
-surface to maintain and buys nothing until you need triggers routines do not have.
+**1. オーケストレーターは不要。** ルーチンはすでにマネージド基盤上でスケジュール、API、GitHub トリガーを提供します。キューサービス、Temporal、独自ワーカーを加えると運用対象が増えるだけです。ルーチンにないトリガーが必要になるまでは利点がありません。
 
-**2. Thin harness adapters, no orchestration abstraction.** Claude Code is the primary
-execution path. Codex gets `AGENTS.md`, repo-scoped skill wrappers, and a hook adapter, all
-pointing at the same contract and workflows. We do not hide either harness behind a custom
-SDK or invent a lowest-common-denominator agent API.
+**2. ハーネス用アダプターは薄く保ち、オーケストレーションを抽象化しない。** 主な実行経路は Claude Code です。Codex には `AGENTS.md`、リポジトリスコープのスキルラッパー、フックアダプターを用意し、すべて同じ契約とワークフローを参照させます。独自 SDK でハーネスを覆い隠したり、共通の最小機能だけに絞ったエージェント API を発明したりはしません。
 
-**3. Deterministic gates matter more, not less.** Without an org behind you, `gates.sh` is
-not a supplement to the quality system, it *is* the quality system. And at N parallel
-sessions the gates run N times while you read a fraction of one, which makes them most of
-the review surface rather than a check on it.
+**3. 決定論的ゲートの重要性は、下がるどころか増す。** 組織の支えがなければ、`gates.sh` は品質システムの補助ではなく、品質システムそのものです。N 個のセッションを並列実行すればゲートは N 回実行されますが、人が読めるのはその一部だけです。ゲートはレビューの確認手段ではなく、その大部分を担います。
 
-**4. Back-pressure is a hard number, not a principle.** The charter's `STOP_IF` review-queue
-limit makes the factory stop producing when too many decisions are pending. This is the one
-piece of the design that actively refuses work, and it is the piece most likely to be
-deleted by someone optimizing for throughput.
+**4. バックプレッシャーは理念ではなく、明確な数値にする。** 憲章の `STOP_IF` に定めるレビュー待ち件数の上限によって、未判断の項目が多すぎるとファクトリーは生産を停止します。設計中で能動的に作業を拒否する唯一の部分であり、処理量の最大化を目指す人が最も削除しがちな部分でもあります。
 
 ---
 
-## The five design rules
+## 5つの設計ルール
 
-Everything else follows from these.
+それ以外のすべては、以下のルールから導かれます。
 
-### 1. Judgment upstream, in a file
+### 1. 判断を上流のファイルに置く
 
-`docs/factory/CHARTER.md` is the primary human-owned policy file and one an agent may never
-edit on its own initiative. It encodes tier, load-bearing paths, what is automatable,
-definition of done, and stop conditions.
+`docs/factory/CHARTER.md` は、人が管理する中心的なポリシーファイルです。エージェントが独断で編集してはいけません。ここにティア、重要箇所のパス、自動化できる作業、完了条件、停止条件を記述します。
 
-Every skill reads it first. **If the charter does not cover something, the answer is stop.**
-Silence means stop, not proceed. Default-deny is what keeps scope from drifting one
-reasonable-looking inference at a time.
+すべてのスキルが最初に読みます。**憲章に規定がなければ、答えは停止です。** 記述がないことは続行ではなく停止を意味します。原則拒否にすることで、一見もっともらしい推測の積み重ねによるスコープの逸脱を防ぎます。
 
-### 2. Autonomy tracks consequence, not difficulty
+### 2. 自律性は難しさではなく影響の大きさで決める
 
-Four tiers, and the relationship is inverted from what people expect:
+ティアは4つあり、その関係は多くの人の予想とは逆です。
 
-| Tier | Autonomy | Typical volume |
+| ティア | 自律性 | 典型的な変更量 |
 |---|---|---|
-| `revival` (unlaunched migrations) | Widest | **Largest** |
-| `greenfield` | Wide | Large |
-| `oss` | Moderate | Medium |
-| `client-production` | Narrowest | **Smallest** |
+| `revival`（未公開プロジェクトの移行） | 最も広い | **最大** |
+| `greenfield` | 広い | 大きい |
+| `oss` | 中程度 | 中程度 |
+| `client-production` | 最も狭い | **最小** |
 
-The tier that changes the most code gets the most autonomy; the tier that changes the least
-gets the least. A ten-thousand-line migration on an unlaunched project is a safer bet than a
-fifty-line change to a client's auth path.
+最も多くのコードを変えるティアに最も高い自律性を与え、変更が最も少ないティアでは自律性も最小にします。未公開プロジェクトの1万行の移行は、顧客の認証処理に対する50行の変更より安全な選択です。
 
-**Tier-bleed is the real risk**, and it is specific to running several tiers in one day.
-Spend a morning on a migration where accepting a hundred unread green diffs is correct, then
-switch to a client repo in the afternoon, and the "green means merge" reflex comes with you.
-Same terminal, same agent, same checkmarks, nothing signals the change.
+**本当のリスクはティア間で判断基準が混ざること**であり、1日に複数のティアを扱うときに特有の問題です。午前中、成功した差分を100件読まずに受け入れてよい移行作業を行い、午後に顧客リポジトリへ切り替えると、「成功ならマージ」という反射的判断まで持ち込んでしまいます。同じターミナル、同じエージェント、同じチェックマークで、変化を知らせるものは何もありません。
 
-That is why the constraint lives in `docs/factory/CONTRACT.md`, with small Claude and Codex
-adapters **inside each repo**, rather than in your habits. When a person moves between risk
-contexts many times a day, the context has to carry the constraint.
+そのため、制約を習慣に任せず `docs/factory/CONTRACT.md` に置き、小さな Claude／Codex アダプターを**各リポジトリの中に**配置します。人が1日に何度もリスクの異なる文脈を行き来するなら、その文脈自身が制約を保持する必要があります。
 
-### 3. The gate script is the verdict
+### 3. ゲートスクリプトが最終判定を出す
 
-`gates.sh` ends with a line no agent may paraphrase:
+`gates.sh` は、どのエージェントも言い換えてはならない行で終わります。
 
 ```
 FACTORY_GATES: level=full status=RED passed=3 failed=1 failing=test skipped=build misconfigured=none
 ```
 
-Skills must quote it verbatim and may not report a result that contradicts it. This exists
-because an agent can argue a human into a merge and cannot argue a type checker into
-anything. In a system where the generator is fluent and confident and reviewer attention is
-scarce, the incorruptible checks are the only ones whose verdict survives contact with a
-persuasive PR description.
+スキルはこの行をそのまま引用し、それに反する結果を報告してはいけません。このルールがあるのは、エージェントは言葉で人を説得してマージさせることはできても、型チェッカーを説得することはできないからです。生成側が流暢で自信に満ち、レビュー担当の注意力が限られるシステムでは、説得力のある PR 説明を前にしても判定が揺らがないのは、改ざんできない検査だけです。
 
-Three tiers, because a gate too slow to run constantly does not get run:
+常時実行するには遅すぎるゲートは実行されなくなるため、レベルを3つに分けます。
 
-- `fast` - types and lint by default. Seconds.
-- `full` - plus tests; build runs when configured. The default before any PR.
-- `deep` - plus audit and architecture rules; mutation runs when configured.
+- `fast`：既定では型検査と lint。数秒で完了します。
+- `full`：さらにテストを追加。ビルドは設定されている場合に実行します。すべての PR 作成前の既定レベルです。
+- `deep`：さらに監査とアーキテクチャルールを追加。ミューテーションテストは設定されている場合に実行します。
 
-Required gates are declared in `.factory/gates.conf`. A required `SKIP` returns
-`MISCONFIGURED` with exit 2. Optional skips remain visible for the human to review.
+必須ゲートは `.factory/gates.conf` に宣言します。必須ゲートが `SKIP` なら、終了コード2で `MISCONFIGURED` を返します。任意ゲートのスキップも、人が確認できるよう表示に残します。
 
-### 4. The writer never grades the work
+### 4. 書いた本人には採点させない
 
-`factory-implement` must delegate to the `factory-verifier` subagent, which reads the diff
-cold, re-runs the gates itself, and is explicitly told to **ignore any narrative** of what
-was implemented.
+`factory-implement` は `factory-verifier` サブエージェントに委譲しなければなりません。検証者は予備知識なしで差分を読み、自らゲートを再実行します。また、実装内容についての**説明をすべて無視する**よう明示的に指示されます。
 
-Its highest-value check is one no deterministic gate can make: revert the non-test hunks and
-confirm the test actually fails without the fix. A test that passes with the implementation
-removed is worse than no test, because it is actively misleading.
+最も価値のある検査は、決定論的なゲートだけではできないものです。テスト以外の差分を戻し、修正なしで本当にテストが失敗することを確認します。実装を取り除いても成功するテストは、積極的に誤解を招くため、テストがないより悪いものです。
 
-Standing bias is reject-when-uncertain. A false accept is worse than no verification: it
-spends a human's trust that was never earned, and they read the next one less carefully.
+不確かな場合は拒否する姿勢を基本とします。誤った承認は検証なしより悪く、まだ獲得していない人の信頼を消費し、次の変更を読む際の注意力まで下げてしまいます。
 
-`factory-critic` is a second, different lens for load-bearing changes. Not redundancy -
-diversity. Across 146 PRs and four review tools, 93.4% of findings were caught by exactly
-one of the four and none by all four. Two reviewers with different failure modes beat one
-good one, which is also why the critic is told not to re-run the gates.
+`factory-critic` は、重要箇所の変更に別の視点を加える役割です。冗長化ではなく、多様性の確保です。146件の PR を4つのレビューツールで調べたところ、指摘の93.4%は4つのうちちょうど1つだけが検出し、4つすべてが検出したものはありませんでした。失敗の傾向が異なる2人のレビュー担当は、優秀な1人より有効です。critic にゲートの再実行をさせないのもそのためです。
 
-### 5. Operational state has one owner
+### 5. 運用状態の正本は1つにする
 
-GitHub issue labels are the live queue. `QUEUE.md` and `STATE.md` are snapshots,
-`DECISIONS.md` and `specs/` preserve human reasoning, and `runs/` contains one immutable
-record per execution.
+GitHub Issue のラベルをライブキューとします。`QUEUE.md` と `STATE.md` はスナップショット、`DECISIONS.md` と `specs/` は人の判断理由を保存する場所、`runs/` は実行ごとの変更不可の記録を保存する場所です。
 
-On one repo you can carry state in your head between sessions. Across a portfolio you
-cannot, and these files are what let a run be resumed by a person who has been thinking
-about something else for six hours. They are also the only durable record after the
-transcripts are gone, which on client work is the difference between a maintainable handover
-and a cliff.
+1つのリポジトリなら、セッションをまたいで状態を頭の中に保持できます。複数のプロジェクトではそうはいきません。こうしたファイルがあれば、6時間別のことを考えていた人でも実行を再開できます。また、会話記録が失われた後に残る唯一の永続的な記録でもあります。顧客の仕事では、それが保守可能な引き継ぎになるか、手掛かりを失うかの違いになります。
 
 ---
 
-## Enforcement: instruction versus structure
+## 強制力：指示と構造の違い
 
-The repository contract tells an agent not to merge. GitHub branch protection or a ruleset
-enforces that boundary. `.claude/hooks/block-merge.sh` and `.codex/hooks.json` add a useful
-second layer for local shell commands.
+リポジトリ契約はエージェントにマージしないよう指示します。GitHub のブランチ保護またはルールセットが、その境界を強制します。`.claude/hooks/block-merge.sh` と `.codex/hooks.json` は、ローカルシェルコマンドに対する有用な第二の防御層です。
 
-The hook is a `PreToolUse` matcher on `Bash` that blocks `gh pr merge`, `git merge`, force
-pushes, pushes to protected branches, and shell writes to protected factory files. Exit code
-2 blocks the call and returns the reason to the agent.
+このフックは `Bash` を対象にする `PreToolUse` マッチャーで、`gh pr merge`、`git merge`、force push、保護ブランチへの push、保護されたファクトリーファイルへのシェル経由の書き込みを遮断します。終了コード2で呼び出しを止め、理由をエージェントに返します。
 
-Hooks do not cover every hosted tool, API path, or specialized tool implementation. Treat
-them as a guardrail, not a security boundary. This distinction matters most during
-unattended runs, when there is no human approval prompt to catch an alternate path.
+フックは、すべてのホスト型ツール、API 経路、専用ツールの実装を網羅するものではありません。セキュリティ境界ではなく、ガードレールとして扱ってください。この区別が特に重要なのは、別経路の利用を人の承認プロンプトで止められない無人実行時です。
 
-Belt and braces: `settings.json` also denies `Edit` on the charter and gate script, and the
-hook additionally blocks routing around those denials via `sed`, `tee`, or shell redirection.
+二重に備えるため、`settings.json` でも憲章とゲートスクリプトに対する `Edit` を拒否し、フックでさらに `sed`、`tee`、シェルのリダイレクトによる迂回を遮断します。
 
 ---
 
-## Failure modes this design targets
+## この設計が対処する失敗パターン
 
-| Failure | Where it is addressed |
+| 失敗 | 対処する箇所 |
 |---|---|
-| Agent rewrites test assertions to go green | Charter rule, implement prohibition, verifier check |
-| Test passes without the implementation | Verifier reverts and re-runs |
-| Green gates, changed behavior (migrations) | `factory-spec` requires naming the oracle first |
-| Scope creep into an unreviewable diff | `files_expected`, line limit, verifier scope check |
-| Comprehension debt | `done_when`, PR "why this is safe", `DECISIONS.md` |
-| Review queue silently overflowing | `STOP_IF` limit; implement routine refuses to start |
-| Tier-bleed between client and greenfield work | Per-repo charter, settings, and hook |
-| Silent truncation reading as full coverage | Every skill must state what it dropped |
-| Constraints drifting into tax or hole | `/factory-tune` on a schedule, evidence in `DECISIONS.md` |
+| エージェントが成功させるためにテストのアサーションを書き換える | 憲章のルール、実装時の禁止事項、検証者の確認 |
+| 実装なしでテストが成功する | 検証者が変更を戻して再実行 |
+| ゲートは成功するが挙動が変わる（移行） | `factory-spec` が最初に正解判定基準の明示を要求 |
+| スコープが膨らみ、レビュー不能な差分になる | `files_expected`、行数上限、検証者のスコープ確認 |
+| 理解不足の負債 | `done_when`、PR の「なぜ安全か」、`DECISIONS.md` |
+| レビュー待ちキューが気付かれないままあふれる | `STOP_IF` の上限。実装ルーチンが開始を拒否 |
+| 顧客作業と新規開発のティアが混ざる | リポジトリごとの憲章、設定、フック |
+| 黙って切り詰めた調査が全件確認と受け取られる | すべてのスキルが省略した内容を明示する義務 |
+| 制約が負担になったり抜け穴になったりする | 定期的な `/factory-tune` と `DECISIONS.md` の証拠 |
 
 ---
 
-## Migrations get their own treatment
+## 移行は別扱いにする
 
-`factory-spec` has a migration-specific rule because migrations are simultaneously the best
-and most dangerous factory workload.
+移行はファクトリーに最も適した作業であると同時に最も危険な作業でもあるため、`factory-spec` には移行専用のルールがあります。
 
-Best: they satisfy all four criteria for unattended operation almost by construction. Cheap
-definitive checks (does it compile), fixed target so no drift, and work that decomposes into
-short independent per-file loops.
+適している理由：ほぼ構造上、無人運用の4条件をすべて満たします。低コストで明確な検査（コンパイルできるか）があり、目標が固定されていて逸脱しにくく、ファイル単位の短く独立したループへ分解できます。
 
-Dangerous: the properties that make blast radius zero on an unlaunched project - no users,
-no CI, thin tests - also make the verification surface zero. **A migration can compile,
-typecheck, pass every existing test, and behave differently**, because the tests never
-covered what changed. At high autonomy and high volume, that replicates everywhere before
-anything surfaces it.
+危険な理由：未公開プロジェクトの影響範囲をゼロにする性質、つまり利用者がいない、CI がない、テストが薄いといった点は、検証できる範囲までゼロにしてしまいます。**移行後にコンパイルも型検査も既存テストもすべて成功して、なお挙動が変わることがあります。** 変わった部分をテストがもともと網羅していないからです。自律性と処理量が高ければ、問題が発覚する前にその変化が全体へ広がります。
 
-So gate 2 of a migration spec must answer one question before any other: **what is the
-oracle?** And the first slices are not migration slices:
+そのため、移行仕様のゲート2では、他の何より先に1つの問いへ答える必要があります。**正解判定基準（オラクル）は何か？** そして最初の作業単位は、移行そのものではありません。
 
-1. Make it build
-2. Make it typecheck
-3. Pin current behavior with characterization tests and golden-master snapshots
-4. **Then** migrate, wide and fast, against the oracle you just built
+1. ビルドできるようにする
+2. 型検査できるようにする
+3. 特性テストとゴールデンマスターのスナップショットで、現在の挙動を固定する
+4. **その後で**、作成した正解判定基準を使い、広範囲を高速に移行する
 
-This reads the back-pressure rule forwards rather than backwards. Instead of accepting the
-verification budget you have and limiting autonomy to match, you go build a bigger budget
-first and claim the autonomy it buys. Deterministic signals are not downstream checks on
-finished work; they are upstream of how much work you are allowed to let run unattended.
+これはバックプレッシャーのルールを、逆向きではなく順方向に捉える考え方です。今ある検証能力を受け入れてそれに合うよう自律性を制限するのではなく、先に検証能力を増やし、それによって可能になった自律性を得ます。決定論的な信号は、完成後の下流の検査ではありません。どこまで無人実行を許可できるかを決める、上流の条件です。
 
 ---
 
-## What is deliberately absent
+## 意図的に用意していないもの
 
-**No auto-merge**, on any tier. Repository-side branch rules enforce it; harness hooks add
-defense in depth.
+**どのティアでも自動マージは行いません。** リポジトリ側のブランチルールで強制し、ハーネスのフックで多層防御を加えます。
 
-**No ROI dashboard.** Nothing stock emits a complete cost record, so building one is a
-project. Unique run records plus issue and PR timestamps still support queue age, gate
-failure rate, verifier rejection rate, review time, and escaped-defect tracking.
+**ROI ダッシュボードはありません。** 標準機能だけでは完全なコスト記録を出力できないため、作るには別の開発が必要です。それでも、固有の実行記録と Issue／PR のタイムスタンプを使えば、キュー滞留時間、ゲート失敗率、検証者による却下率、レビュー時間、流出不具合を追跡できます。
 
-**No steering or handoff layer.** You get `--teleport`, `/tasks`, `-p --cloud <id>`, and PR
-comments. A vendor platform gives you more. That is a real gap, accepted knowingly.
+**操作指示や引き継ぎ用の独自レイヤーはありません。** 使えるのは `--teleport`、`/tasks`、`-p --cloud <id>`、PR コメントです。ベンダー製プラットフォームなら、より多くの機能があります。この不足は理解したうえで受け入れています。
 
-**No self-improvement loop.** `/factory-tune` proposes; a human decides. A factory that
-rewrites its own constraints has none.
+**自己改善ループはありません。** `/factory-tune` は提案し、人が決めます。自ら制約を書き換えるファクトリーに、制約は存在しません。

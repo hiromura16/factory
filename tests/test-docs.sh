@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Check that repository-relative Markdown links resolve.
+# リポジトリ相対のMarkdownリンクが解決できるか確認します。
 
 set -euo pipefail
 
@@ -41,7 +41,7 @@ for document in sorted(root.rglob("*.md")):
             )
 
 if failures:
-    print("Broken repository-relative Markdown links:", file=sys.stderr)
+    print("リポジトリ相対Markdownリンクが壊れています:", file=sys.stderr)
     for failure in failures:
         print(f"  {failure}", file=sys.stderr)
     raise SystemExit(1)

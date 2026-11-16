@@ -1,4 +1,4 @@
-name: Validate factory
+name: ファクトリーの検証
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Check shell syntax
+      - name: シェル構文の検査
         shell: bash
         run: |
           bash -n \
@@ -26,8 +26,8 @@ jobs:
             template/.factory/scripts/*.sh \
             tests/*.sh
 
-      - name: Check JSON configuration
+      - name: JSON設定の検査
         run: jq empty template/.claude/settings.json template/.codex/hooks.json
 
-      - name: Run factory tests
+      - name: ファクトリーのテスト実行
         run: bash tests/run.sh

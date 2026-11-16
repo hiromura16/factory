@@ -1,105 +1,86 @@
-# Claude cloud quickstart
+# Claudeクラウドのクイックスタート
 
-About 30 minutes. Do it on a `greenfield` repo first, not a client one.
+所要時間は約30分です。最初は顧客のリポジトリではなく、`greenfield`のリポジトリで試してください。
 
-This guide starts where the desktop tutorial ends. If you have not yet installed the
-template, configured the charter, and seen green local gates, begin with
-[GETTING_STARTED.md](GETTING_STARTED.md). Return here when you are ready to add Claude cloud
-sessions and routines.
+このガイドは、デスクトップのチュートリアルを終えたところから始まります。テンプレートのインストール、チャーターの設定、ローカルゲートの成功確認がまだなら、[GETTING_STARTED.md](GETTING_STARTED.md)から始めてください。Claudeのクラウドセッションとルーチンを追加する準備ができたら、ここへ戻ります。
 
-## 0. Prerequisites
+## 0. 前提条件
 
-- Claude Code CLI installed and signed in with `claude auth login` (a claude.ai
-  subscription login, **not** an API key: routines and `--teleport` both require it)
-- Claude Code on the web enabled
-- GitHub connected, one of:
-  - the [Claude GitHub App](https://github.com/apps/claude) installed on the repo, or
-  - `/web-setup` run in your terminal to sync your `gh` token
+- Claude Code CLIをインストールし、`claude auth login`でサインインしていること（claude.aiのサブスクリプションでのログインであり、APIキーではありません。ルーチンと`--teleport`には、どちらもこのログインが必要です）
+- Web版Claude Codeが有効であること
+- 次のいずれかでGitHubを接続していること
+  - リポジトリに[Claude GitHub App](https://github.com/apps/claude)をインストールする
+  - ターミナルで`/web-setup`を実行し、`gh`トークンを同期する
 
-The App is required for **routine GitHub triggers** and for **auto-fix**. `/web-setup`
-alone grants clone access but does not enable webhooks. If you want routine 3 (PR verify),
-install the App.
+**ルーチンのGitHubトリガー**と**auto-fix**にはAppが必要です。`/web-setup`だけではクローンのアクセス権は得られますが、Webhookは有効になりません。ルーチン3（PR検証）を使う場合は、Appをインストールしてください。
 
-Check:
+確認します。
 
 ```bash
 claude --version && claude auth whoami
 ```
 
-## 1. Install the template
+## 1. テンプレートをインストールする
 
 ```bash
 cd /path/to/your/repo
 /path/to/reference-software-factory/install.sh
 ```
 
-It copies the shared factory contract, Claude Code files, the Codex adapter, and
-`docs/factory/`, refusing to overwrite anything that already exists. Review the diff before
-committing. The optional instant issue-trigger workflow is installed only with
-`--with-issue-trigger`.
+共有のFactory契約、Claude Codeのファイル、Codexアダプター、`docs/factory/`をコピーし、既存のものは上書きしません。コミット前に差分をレビューしてください。任意の即時Issueトリガーワークフローは、`--with-issue-trigger`を指定した場合だけインストールされます。
 
-## 2. Write the charter
+## 2. チャーターを書く
 
-**This is the judgment step.** Gate wiring and repository enforcement also require review,
-but the charter is where you decide which work the factory may attempt.
+**ここが判断を行う段階です。** ゲートの接続設定やリポジトリ側の強制ルールもレビューが必要ですが、Factoryにどの作業を試みさせるかを決めるのはチャーターです。
 
 ```bash
 $EDITOR docs/factory/CHARTER.md
 ```
 
-Set at minimum:
+少なくとも次を設定します。
 
-- **`CHARTER_STATUS`** - leave `incomplete` while editing; set it to `ready` only after
-  reviewing every section.
-- **`TIER`** - one of `revival`, `greenfield`, `oss`, `client-production`. This single
-  choice sets how much autonomy every routine gets.
-- **`LOAD_BEARING`** - globs no routine may touch unattended. Be generous at first; you can
-  loosen later with evidence, and the reverse is more expensive.
-- **`AUTOMATABLE`** - be specific. Vague entries produce vague triage.
-- **`STOP_IF`** review-queue limit - start at 3.
+- **`CHARTER_STATUS`**：編集中は`incomplete`のままにし、すべての節をレビューしてから`ready`にします。
+- **`TIER`**：`revival`、`greenfield`、`oss`、`client-production`のいずれか。この1つの選択で、各ルーチンに与える自律性の範囲が決まります。
+- **`LOAD_BEARING`**：どのルーチンも無人では変更してはいけないパスのglob。最初は広めに保護してください。証拠を得てから緩めることはできますが、逆の対応は高くつきます。
+- **`AUTOMATABLE`**：具体的に書きます。曖昧な項目からは曖昧なトリアージしか生まれません。
+- **`STOP_IF`**のレビューキュー上限：3から始めます。
 
-Getting `AUTOMATABLE` wrong in the generous direction is the most common way this goes
-badly. Start with dependency bumps and doc fixes. Add categories once you have evidence.
+`AUTOMATABLE`を許容しすぎる方向に誤設定することが、最もよくある失敗の原因です。依存関係の更新と文書の修正から始め、証拠が得られたら対象カテゴリを追加してください。
 
-## 3. Wire the gates
+## 3. ゲートを接続する
 
 ```bash
 $EDITOR .factory/gates.conf
-$EDITOR .claude/scripts/gates.sh   # only when auto-detection needs project-specific logic
+$EDITOR .claude/scripts/gates.sh   # 自動検出にプロジェクト固有のロジックが必要な場合のみ
 ```
 
-The script auto-detects node, python, rust, and go. Confirm it picks up your real commands:
+スクリプトはnode、python、rust、goを自動検出します。実際に使うコマンドが選ばれることを確認してください。
 
 ```bash
 ./.claude/scripts/gates.sh fast
 ./.claude/scripts/gates.sh full
 ```
 
-Required gates are listed by level in `.factory/gates.conf`. If one cannot run, the result
-is `MISCONFIGURED` with exit 2. Optional gates may still show `SKIP`; decide deliberately
-whether each belongs in the required list.
+必須ゲートは`.factory/gates.conf`にレベル別で列挙されています。必須ゲートを実行できない場合、結果は`MISCONFIGURED`、終了コードは2になります。任意のゲートには`SKIP`が表示されることがあります。各ゲートを必須リストに含めるかどうかは、意図的に判断してください。
 
-## 4. Bootstrap the live queue and enforcement
+## 4. 実際のキューと強制ルールを初期設定する
 
-Preview, then create the GitHub labels used for claims and handoffs:
+担当の確保と引き継ぎに使うGitHubラベルを、プレビューしてから作成します。
 
 ```bash
 ./.factory/scripts/bootstrap-github.sh
 ./.factory/scripts/bootstrap-github.sh --apply
 ```
 
-Configure a GitHub ruleset or branch protection for the default branch and do not grant the
-agent a bypass. The committed hooks catch common shell commands, but they are not a complete
-enforcement boundary. The minimal settings are recorded in
-`docs/factory/GITHUB.md`.
+デフォルトブランチにGitHubルールセットまたはブランチ保護を設定し、エージェントには迂回権限を与えないでください。コミット済みのフックは一般的なシェルコマンドを捕捉しますが、完全な強制境界ではありません。最低限の設定は`docs/factory/GITHUB.md`に記載されています。
 
-Run the setup check:
+設定チェックを実行します。
 
 ```bash
 ./.factory/scripts/doctor.sh
 ```
 
-Then commit:
+続いてコミットします。
 
 ```bash
 chmod +x .claude/scripts/gates.sh .claude/hooks/block-merge.sh .factory/scripts/*.sh
@@ -108,10 +89,9 @@ git commit -m "factory: install"
 git push
 ```
 
-**Push before testing in the cloud.** Cloud sessions clone from the remote, not your local
-checkout.
+**クラウドで試す前にpushしてください。** クラウドセッションはローカルのチェックアウトではなく、リモートからクローンします。
 
-## 5. Test locally first
+## 5. まずローカルで試す
 
 ```bash
 claude
@@ -121,68 +101,61 @@ claude
 /factory
 ```
 
-You should get an empty control-room report. Then dry-run triage without letting it write:
+空のコントロールルーム報告が得られるはずです。次に、書き込みを許可せずトリアージをドライランします。
 
 ```
-Run the factory-triage skill, but only report what you would do. Write nothing and
-apply no labels.
+factory-triageスキルを実行し、何をするかの報告だけを行ってください。
+何も書き込まず、ラベルも適用しないでください。
 ```
 
-Read the output. If the dispositions look wrong, the charter is wrong. Fix it now, before
-anything runs unattended.
+出力を読みます。振り分けが適切でなければ、チャーターが適切ではありません。無人実行が始まる前に、今ここで修正してください。
 
-## 6. Test in the cloud
+## 6. クラウドで試す
 
 ```bash
-claude --cloud "Run the factory-triage skill and report what you would do. Write nothing."
+claude --cloud "factory-triageスキルを実行し、何をするか報告してください。何も書き込まないでください。"
 ```
 
-Monitor with `/tasks`, or open the session on claude.ai or the mobile app.
+`/tasks`で監視するか、claude.aiまたはモバイルアプリでセッションを開きます。
 
-Two things to verify in this run specifically:
+この実行では、特に次の2点を確認してください。
 
-- the skill was found (it came from the repo clone, which is the whole factory-as-code bet)
-- the built-in GitHub tools could read your issues without `gh`
+- スキルが見つかったこと（リポジトリのクローンから読み込まれることが、Factoryをコードとして管理する設計の要です）
+- 組み込みのGitHubツールが、`gh`なしでIssueを読めたこと
 
-If you need to take over, pull the session down:
+自分で引き継ぐ必要がある場合は、セッションをローカルへ取り込みます。
 
 ```bash
 claude --teleport
 ```
 
-Requires a clean working tree and the same repo checkout.
+クリーンな作業ツリーと、同じリポジトリのチェックアウトが必要です。
 
-## 7. Create the routines
+## 7. ルーチンを作成する
 
-Follow [ROUTINES.md](ROUTINES.md). **Create routine 1 (triage) only.** Let it run for a
-few days before adding the rest.
+[ROUTINES.md](ROUTINES.md)に従ってください。**ルーチン1（トリアージ）だけを作成します。** 残りを追加する前に、数日間実行してください。
 
-Do not create all five on day one. You will not know which one is misbehaving, and the
-daily run cap is easy to burn on a factory you have not yet learned to read.
+初日に5つすべてを作成してはいけません。どれが問題を起こしているのか分からなくなり、まだ出力を読み解けないFactoryで1日の実行上限を使い切りやすくなります。
 
-## 8. Configure the cloud environment
+## 8. クラウド環境を設定する
 
-At [claude.ai/code](https://claude.ai/code), open the environment selector.
+[claude.ai/code](https://claude.ai/code)で環境セレクターを開きます。
 
-The **Default** environment (Trusted network, no setup script) is enough for most repos. Add
-a setup script only if your gates need tooling that is not pre-installed:
+ほとんどのリポジトリでは、**Default**環境（Trustedネットワーク、セットアップスクリプトなし）で十分です。ゲートに必要なツールがプリインストールされていない場合だけ、セットアップスクリプトを追加してください。
 
 ```bash
-# runs once, then cached; keep under ~5 minutes
+# 初回に一度実行され、その後キャッシュされる。約5分以内に収める
 apt update && apt install -y gh
 pnpm install --frozen-lockfile
 ```
 
-Cloud sessions already include Node 20/21/22, Python with pytest/ruff/mypy, Ruby, PHP, Java,
-Go, Rust, Docker, Postgres 16, and Redis.
+クラウドセッションには、Node 20/21/22、pytest/ruff/mypy付きのPython、Ruby、PHP、Java、Go、Rust、Docker、Postgres 16、Redisがすでに含まれています。
 
-**Record whatever you paste into that UI in a `CLOUD-ENVIRONMENT.md` in your repo.** It is
-the one part of the factory that cannot be committed, so document it or it is lost on the
-next machine.
+**そのUIに貼り付けた内容は、必ずリポジトリの`CLOUD-ENVIRONMENT.md`に記録してください。** これはFactoryの中でコミットできない唯一の設定部分です。文書化しなければ、次のマシンで失われます。
 
-## 9. First real run
+## 9. 最初の実運用
 
-Let triage run once. Then:
+トリアージを一度実行させます。その後、次を実行します。
 
 ```bash
 claude
@@ -192,57 +165,49 @@ claude
 /factory
 ```
 
-Read the queue. For each item, ask whether you agree with the disposition. You are grading
-the charter, not the agent: wrong dispositions mean the charter was ambiguous.
+キューを読み、各項目の振り分けに賛成できるか確認します。評価しているのはエージェントではなくチャーターです。振り分けが誤っているなら、チャーターが曖昧だったことを意味します。
 
-Only after triage produces dispositions you agree with should you add routine 2 (implement).
-
----
-
-## Daily use
-
-**Desktop, morning.** `/factory` in the repo you are working in. It leads with what needs
-you and calls out the review queue depth.
-
-**Fan out to cloud.** Independent tasks, each its own session:
-
-```bash
-claude --cloud "Implement FQ-142 following the factory-implement skill"
-claude --cloud "Implement FQ-147 following the factory-implement skill"
-```
-
-Track with `/tasks`. Pull one back with `--teleport` when it needs you.
-
-**Plan locally, execute remotely.** The highest-value pattern for anything non-trivial:
-
-```bash
-claude --permission-mode plan     # think it through, no edits
-# save the plan into the repo, commit, push
-claude --cloud "Execute the plan in docs/factory/specs/FQ-150/04-slices.md"
-```
-
-Judgment upstream, execution unattended. That split is the whole design.
-
-**Steer a running session** from any machine without attaching:
-
-```bash
-claude -p "also update the changelog" --cloud <session-id>
-```
-
-**Watch a PR.** On its branch, `/autofix-pr` spawns a web session that responds to CI
-failures and review comments. Requires the GitHub App. Do not enable it on repos where a PR
-comment can trigger deployment automation.
-
-**Monthly.** `/factory-tune`. Tighten where something escaped, loosen where you have a run
-of evidence, and write the result to `DECISIONS.md`.
+トリアージが納得できる振り分けを出すようになってから、ルーチン2（実装）を追加してください。
 
 ---
 
-## When to stop expanding
+## 日々の使い方
 
-Add the next routine when the current set has run clean for a week and you have read its
-output. Stop adding when the review queue is regularly at its charter limit.
+**朝、デスクトップで。** 作業中のリポジトリで`/factory`を実行します。人の対応が必要な事項を先に示し、レビューキューの件数を知らせます。
 
-At that point more automation produces nothing. The constraint is not how many agents can
-run, it is how many decisions are pending your judgment, and a full queue means the factory
-should produce less rather than review faster.
+**クラウドへ並列展開する。** 独立したタスクを、それぞれ別のセッションで実行します。
+
+```bash
+claude --cloud "factory-implementスキルに従ってFQ-142を実装してください"
+claude --cloud "factory-implementスキルに従ってFQ-147を実装してください"
+```
+
+`/tasks`で追跡します。人の対応が必要になったら、`--teleport`で対象セッションを取り込みます。
+
+**ローカルで計画し、リモートで実行する。** 単純ではない作業で最も価値の高いパターンです。
+
+```bash
+claude --permission-mode plan     # 検討だけを行い、編集しない
+# 計画をリポジトリに保存し、コミットしてpushする
+claude --cloud "docs/factory/specs/FQ-150/04-slices.mdの計画を実行してください"
+```
+
+先に人が判断し、実行は無人で進める。この分離が設計のすべてです。
+
+**実行中のセッションを方向づける。** 接続し直さず、どのマシンからでも指示できます。
+
+```bash
+claude -p "変更履歴も更新してください" --cloud <session-id>
+```
+
+**PRを見守る。** 対象ブランチで`/autofix-pr`を実行すると、CI失敗やレビューコメントに対応するWebセッションが起動します。GitHub Appが必要です。PRコメントがデプロイ自動化を起動し得るリポジトリでは、有効にしないでください。
+
+**毎月。** `/factory-tune`を実行します。見逃しがあった箇所は厳しくし、十分な証拠が積み重なった箇所は緩め、結果を`DECISIONS.md`に記録します。
+
+---
+
+## 拡張を止めるタイミング
+
+現在のルーチン群が1週間問題なく動き、その出力を読んだら、次のルーチンを追加します。レビューキューが頻繁にチャーターの上限へ達するようになったら、追加を止めてください。
+
+その段階では、自動化を増やしても成果は増えません。制約は実行できるエージェントの数ではなく、人の判断を待つ決定事項の数です。キューが満杯なら、レビューを速めるよりもFactoryが作る量を減らすべきです。

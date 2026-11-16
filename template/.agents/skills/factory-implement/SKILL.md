@@ -1,12 +1,11 @@
 ---
 name: factory-implement
-description: Claim and implement one ready GitHub issue, run fail-closed gates, obtain independent verification, and open a draft pull request.
+description: 着手可能な GitHub issue を1件確保して実装し、安全側に倒すゲートと独立検証を実行してドラフト PR を作成します。
 ---
 
-# Factory implementation for Codex
+# Codex 向け Factory 実装
 
-Read `docs/factory/CONTRACT.md`, `docs/factory/CHARTER.md`, and then the canonical workflow
-in `.claude/skills/factory-implement/SKILL.md`. Use Codex's subagent mechanism for the fresh
-verifier context. If an independent context is unavailable, stop before opening a non-draft
-pull request.
-
+`docs/factory/CONTRACT.md`、`docs/factory/CHARTER.md`、続いて正本のワークフロー
+`.claude/skills/factory-implement/SKILL.md` を読んでください。新しい検証用コンテキストには
+Codex のサブエージェント機構を使います。独立したコンテキストを用意できない場合は、
+ドラフトではない PR を作成する前に停止してください。

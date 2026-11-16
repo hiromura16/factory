@@ -1,55 +1,44 @@
-# Contributing
+# コントリビューション
 
-Factory is small enough to understand from the repository. A useful change should keep it
-that way.
+Factoryは、リポジトリを読めば理解できる小さな構成です。有用な変更は、その状態を保つものであるべきです。
 
-## Find the right layer
+## 適切な層を選ぶ
 
-- Change `template/docs/factory/CONTRACT.md` when both Claude Code and Codex need the same
-  policy.
-- Change a canonical workflow under `template/.claude/skills/` when the sequence of work
-  changes.
-- Keep `template/.agents/skills/` as thin Codex adapters. Duplicating a workflow there
-  creates two implementations that can drift.
-- Change `install.sh` when distribution behavior changes. It must remain safe to rerun and
-  must never overwrite an existing file.
-- Put product limitations in `LIMITS.md`, not in optimistic setup prose.
+- Claude CodeとCodexの両方に共通の方針が必要な場合は、`template/docs/factory/CONTRACT.md`を変更します。
+- 作業の順序が変わる場合は、`template/.claude/skills/`以下の正規ワークフローを変更します。
+- `template/.agents/skills/`は薄いCodexアダプターのままにします。そこへワークフローを複製すると、互いにずれていく可能性のある2つの実装が生まれます。
+- 配布時の動作が変わる場合は、`install.sh`を変更します。繰り返し実行しても安全で、既存ファイルを決して上書きしない状態を維持しなければなりません。
+- 製品の制限事項は、楽観的なセットアップ説明ではなく`LIMITS.md`に記載します。
 
-## Validate a change
+## 変更を検証する
 
-Run:
+次を実行します。
 
 ```bash
 bash tests/run.sh
 ```
 
-The suite installs the template into disposable Git repositories and exercises gate
-failures, concurrent claims, merge guards, the setup doctor, and negative-test restoration.
-When changing one of those boundaries, add the failing test first.
+このスイートは、使い捨てのGitリポジトリへテンプレートをインストールし、ゲート失敗、並行した担当確保、マージガード、設定診断、異常系テスト後の復元を検証します。これらの境界を変更するときは、まず失敗するテストを追加してください。
 
-For an onboarding change, also follow [GETTING_STARTED.md](GETTING_STARTED.md) from a clean
-target repository. The first experience should not require the reader to understand cloud
-routines, hooks, or the queue protocol before seeing a local dry run.
+導入手順を変更した場合は、クリーンな対象リポジトリで[GETTING_STARTED.md](GETTING_STARTED.md)にも従ってください。最初の体験でローカルのドライランを見るまでに、クラウドルーチン、フック、キュープロトコルの理解を要求してはいけません。
 
-## Keep the history readable
+## 読みやすい履歴を保つ
 
-Use one commit per behavior or documentation boundary. A few examples:
+動作または文書の境界ごとに1つのコミットを作ります。例を示します。
 
 ```text
-feat: detect pnpm gates
-fix: preserve monitor labels during triage
-docs: clarify Codex hook trust
-test: cover concurrent issue claims
+feat: pnpmのゲートを検出
+fix: トリアージ中に監視ラベルを保持
+docs: Codexフックの信頼設定を明確化
+test: Issueの並行した担当確保を検証
 ```
 
-Avoid mixing a policy change, a workflow change, and a prose cleanup in one commit. The
-factory asks agents to leave durable evidence; its own history should meet the same bar.
+方針の変更、ワークフローの変更、文章の整理を1つのコミットに混在させないでください。Factoryはエージェントに永続的な証拠を残すよう求めています。Factory自身の履歴も同じ基準を満たすべきです。
 
-## Before opening a pull request
+## プルリクエストを作成する前に
 
-- Confirm `bash tests/run.sh` passes.
-- Read the diff without whitespace hiding enabled.
-- Explain any changed safety boundary in the pull request body.
-- Link the official Claude Code or OpenAI documentation for product-behavior claims.
-- Do not include credentials, routine API tokens, client repository data, or generated run
-  records from a private project.
+- `bash tests/run.sh`が成功することを確認します。
+- 空白差分を非表示にせず、差分を読みます。
+- 変更した安全上の境界があれば、プルリクエスト本文で説明します。
+- 製品の動作に関する記述には、Claude CodeまたはOpenAIの公式ドキュメントへのリンクを付けます。
+- 認証情報、ルーチンのAPIトークン、顧客リポジトリのデータ、非公開プロジェクトから生成された実行記録を含めないでください。

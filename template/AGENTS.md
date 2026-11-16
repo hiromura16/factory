@@ -1,11 +1,12 @@
-# Project and factory guidance for Codex
+# Codex向けプロジェクト・Factoryガイド
 
-Read `CLAUDE.md` for the project's commands and conventions, then read
-`docs/factory/CONTRACT.md` and `docs/factory/CHARTER.md` before changing anything.
-For first-time setup and the local dry run, follow `docs/factory/README.md`.
+変更する前に、プロジェクトのコマンドと規約を `CLAUDE.md` で確認し、
+続いて `docs/factory/CONTRACT.md` と `docs/factory/CHARTER.md` を読んでください。
+初期設定とローカルでのドライランは `docs/factory/README.md` に従ってください。
 
-The contract is shared with Claude Code. If this adapter and the contract disagree, the
-contract wins. Use the repo-scoped skills under `.agents/skills/` for factory workflows.
+この契約はClaude Codeと共有しています。このアダプターと契約が食い違う場合は、
+契約を優先します。Factoryのワークフローには `.agents/skills/` にある
+リポジトリ内のスキルを使ってください。
 
-Repository hooks in `.codex/hooks.json` are defense in depth. They require local trust and
-do not replace GitHub branch protection.
+`.codex/hooks.json` のリポジトリフックは多層防御の一部です。
+ローカルでの信頼設定が必要で、GitHubのブランチ保護を代替するものではありません。

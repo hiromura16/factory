@@ -1,11 +1,10 @@
 ---
 name: factory-tune
-description: Review factory evidence and propose tighter or looser constraints without editing the charter. Use for a periodic constraint review.
+description: Factory の証跡をレビューし、憲章を編集せずに制約の強化・緩和を提案します。定期的な制約の見直しに使用します。
 ---
 
-# Factory tuning for Codex
+# Codex 向け Factory 調整
 
-Read `docs/factory/CONTRACT.md`, then follow `.claude/commands/factory-tune.md`. Propose
-changes and record accepted human decisions in `docs/factory/DECISIONS.md`; never edit the
-charter or gate requirements on your own initiative.
-
+`docs/factory/CONTRACT.md` を読み、`.claude/commands/factory-tune.md` に従ってください。
+変更を提案し、人間が承認した判断を `docs/factory/DECISIONS.md` に記録します。
+自発的に憲章やゲート要件を編集してはいけません。

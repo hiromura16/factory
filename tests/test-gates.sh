@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-command -v node >/dev/null 2>&1 || { echo "gates: skipped (node unavailable)"; exit 0; }
-command -v npm >/dev/null 2>&1 || { echo "gates: skipped (npm unavailable)"; exit 0; }
+command -v node >/dev/null 2>&1 || { echo "ゲート: スキップ（nodeがありません）"; exit 0; }
+command -v npm >/dev/null 2>&1 || { echo "ゲート: スキップ（npmがありません）"; exit 0; }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/factory-gates.XXXXXX")"

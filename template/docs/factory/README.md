@@ -1,76 +1,75 @@
-# Factory operating guide
+# Factory運用ガイド
 
-This directory is the durable operating state for the repository's software factory. Start
-here after installing the template into a project.
+このディレクトリは、リポジトリのソフトウェアFactoryの運用状態を永続的に保持します。
+プロジェクトにテンプレートをインストールしたら、ここから始めてください。
 
-The first safe milestone is modest: the charter describes the project accurately, the
-required gates run locally, and both Claude Code and Codex can report what they would do
-without writing anything.
+最初の安全な到達目標は控えめです。憲章がプロジェクトを正確に説明していること、
+必須ゲートがローカルで動くこと、Claude CodeとCodexの両方が、
+何も書き込まずに予定する作業を報告できることを目指します。
 
-## Configure once
+## 最初に一度設定する
 
-1. Review [CHARTER.md](CHARTER.md). Choose one tier, replace the example paths and work
-   categories, set the review-queue limit, and leave `CHARTER_STATUS` as `incomplete` until
-   every section has been read.
-2. Configure `../../.factory/gates.conf`, then run:
+1. [CHARTER.md](CHARTER.md) を確認します。区分を1つ選び、サンプルのパスと作業分類を
+   置き換え、レビュー待ちキューの上限を設定します。
+   すべての節を読むまで `CHARTER_STATUS` は `incomplete` のままにします。
+2. `../../.factory/gates.conf` を設定し、次を実行します。
 
    ```bash
    ./.claude/scripts/gates.sh fast
    ./.claude/scripts/gates.sh full
    ```
 
-3. Replace the project placeholders and command examples at the top of
-   [`CLAUDE.md`](../../CLAUDE.md).
-4. Preview the GitHub labels with `./.factory/scripts/bootstrap-github.sh`. Add `--apply`
-   only after confirming the target repository.
-5. Configure branch protection or a GitHub ruleset using [GITHUB.md](GITHUB.md).
-6. Run `./.factory/scripts/doctor.sh`, review the installation diff, commit, and push.
+3. [`CLAUDE.md`](../../CLAUDE.md) 冒頭のプロジェクトの仮記入箇所とコマンド例を置き換えます。
+4. `./.factory/scripts/bootstrap-github.sh` でGitHubラベルをプレビューします。
+   対象リポジトリを確認してから `--apply` を付けてください。
+5. [GITHUB.md](GITHUB.md) に従って、ブランチ保護またはGitHubルールセットを設定します。
+6. `./.factory/scripts/doctor.sh` を実行し、インストール差分を確認して、コミット・pushします。
 
-Cloud sessions start from the remote repository. An unpushed factory does not exist from
-their point of view.
+クラウドセッションはリモートリポジトリから始まります。
+pushしていないFactoryは、クラウドセッションから見ると存在しません。
 
-## Use it from Claude Code
+## Claude Codeから使う
 
-The installed project commands are:
+インストールされるプロジェクトコマンドは次のとおりです。
 
-- `/factory` reports the live queue, gate health, and work needing human judgment.
-- `/factory-tune` reviews evidence and proposes constraint changes.
-- `factory-triage`, `factory-spec`, `factory-implement`, `factory-verify`, and
-  `factory-monitor` are the workflow skills.
+- `/factory` は実際のキュー、ゲートの状態、人間の判断が必要な作業を報告します。
+- `/factory-tune` は証拠を確認し、制約の変更を提案します。
+- `factory-triage`、`factory-spec`、`factory-implement`、`factory-verify`、
+  `factory-monitor` はワークフロースキルです。
 
-Begin with a report-only triage request:
-
-```text
-Run the factory-triage skill in report-only mode. Do not write files or apply labels.
-Explain every proposed disposition using the charter.
-```
-
-## Use it from Codex
-
-Codex reads [`AGENTS.md`](../../AGENTS.md) and discovers the adapters under
-`../../.agents/skills/`. Ask for the workflow by name:
+まず、報告のみのトリアージを依頼します。
 
 ```text
-Use the factory-status skill to show the control room. Report only; change nothing.
+factory-triageスキルを報告のみのモードで実行してください。ファイルの書き込みやラベルの適用はしないでください。
+提案するすべての処理区分を、憲章に基づいて説明してください。
 ```
 
-The adapters point to the canonical workflows under `.claude/skills/`. If a Codex adapter
-and [CONTRACT.md](CONTRACT.md) disagree, the contract wins.
+## Codexから使う
 
-## Which file owns what?
+Codexは [`AGENTS.md`](../../AGENTS.md) を読み、`../../.agents/skills/` のアダプターを検出します。
+ワークフローを名前で指定して依頼します。
 
-| File | Role |
+```text
+factory-statusスキルを使って管制室の状況を表示してください。報告のみとし、何も変更しないでください。
+```
+
+アダプターは `.claude/skills/` にある正規のワークフローを参照します。
+Codexアダプターと [CONTRACT.md](CONTRACT.md) が食い違う場合は、契約を優先します。
+
+## 各ファイルの役割
+
+| ファイル | 役割 |
 |---|---|
-| [CHARTER.md](CHARTER.md) | Human-owned risk, scope, autonomy, and stop decisions |
-| [CONTRACT.md](CONTRACT.md) | Shared rules for Claude Code and Codex |
-| [GITHUB.md](GITHUB.md) | Queue-label and repository-enforcement setup |
-| [QUEUE.md](QUEUE.md) | Reviewable queue snapshot; GitHub labels remain live state |
-| [STATE.md](STATE.md) | Compact human-readable health snapshot |
-| [DECISIONS.md](DECISIONS.md) | Accepted constraint changes and their evidence |
-| [`runs/`](runs/README.md) | One immutable record per execution |
+| [CHARTER.md](CHARTER.md) | リスク、範囲、自律性、停止に関する、人間が決める事項 |
+| [CONTRACT.md](CONTRACT.md) | Claude CodeとCodexの共通ルール |
+| [GITHUB.md](GITHUB.md) | キューラベルとリポジトリ側の強制ルールの設定 |
+| [QUEUE.md](QUEUE.md) | レビュー可能なキューのスナップショット。実際の状態はGitHubラベルが保持 |
+| [STATE.md](STATE.md) | 人間向けの簡潔な稼働状態のスナップショット |
+| [DECISIONS.md](DECISIONS.md) | 採用した制約変更とその証拠 |
+| [`runs/`](runs/README.md) | 実行ごとに1件の変更不可の記録 |
 
-## Daily operating rule
+## 日々の運用ルール
 
-Read the control room before starting more work. When the number of items awaiting review
-reaches the charter limit, stop producing. The factory's useful throughput is bounded by
-what a human can verify and understand, even when generation itself is cheap.
+作業を増やす前に、管制室の状況を確認してください。レビュー待ちの件数が憲章の上限に達したら、
+成果物を増やすのを止めます。生成そのものが安価でも、Factoryの有用な処理量は、
+人間が検証して理解できる量に制限されます。

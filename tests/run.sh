@@ -16,5 +16,5 @@ for test_script in tests/test-*.sh; do
   bash "$test_script"
 done
 
-printf '\nAll factory tests passed.\n'
+printf '\nファクトリーの全テストに合格しました。\n'
 

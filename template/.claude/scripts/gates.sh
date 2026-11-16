@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# gates.sh - the factory's deterministic verdict.
+# gates.sh - ファクトリーの決定論的な判定。
 #
-# This is the one part of the pipeline that cannot be talked out of its verdict
-# by a confident paragraph. Every factory skill calls it. Nothing merges without it.
+# パイプラインのこの部分だけは、自信満々な説明でも判定を覆せません。
+# 全ファクトリースキルが呼び出します。これなしにマージしてはいけません。
 #
-# Usage:
-#   ./.claude/scripts/gates.sh fast    # types + lint            (~seconds, run constantly)
-#   ./.claude/scripts/gates.sh full    # + tests + build         (default, run before any PR)
-#   ./.claude/scripts/gates.sh deep    # + audit + complexity    (run on load-bearing changes)
+# 使い方:
+#   ./.claude/scripts/gates.sh fast    # 型 + lint（数秒程度、頻繁に実行）
+#   ./.claude/scripts/gates.sh full    # + テスト + ビルド（既定、PR作成前に実行）
+#   ./.claude/scripts/gates.sh deep    # + 監査 + 複雑性（重要経路の変更時に実行）
 #
-# Exit codes:  0 = all required gates green   1 = at least one gate red
-#              2 = invalid level or a required gate could not run
+# 終了コード: 0 = 全必須ゲート合格、1 = 1つ以上のゲートが不合格
+#              2 = 無効なレベル、または必須ゲートを実行できなかった
 #
-# Output ends with a machine-readable line so an agent cannot paraphrase the result:
+# エージェントが結果を言い換えないよう、最後に機械可読行を出力します:
 #   FACTORY_GATES: level=full status=RED passed=3 failed=1 failing=test skipped=build misconfigured=none
 #
-# Customise .factory/gates.conf and the DETECT block for your project.
+# プロジェクトに合わせて.factory/gates.confとDETECTブロックを調整してください。
 
 set -uo pipefail
 
@@ -26,7 +26,7 @@ cd "$ROOT" || exit 2
 case "$LEVEL" in
   fast|full|deep) ;;
   *)
-    echo "error: gate level must be fast, full, or deep (got: $LEVEL)" >&2
+    echo "エラー: ゲートレベルはfast、full、deepのいずれかです（指定値: $LEVEL）" >&2
     printf 'FACTORY_GATES: level=%s status=MISCONFIGURED passed=0 failed=0 failing=none skipped=none misconfigured=invalid-level\n' "$LEVEL"
     exit 2
     ;;
@@ -36,7 +36,7 @@ REQUIRED_FAST="types lint"
 REQUIRED_FULL="types lint test"
 REQUIRED_DEEP="types lint test audit architecture"
 if [ -f .factory/gates.conf ]; then
-  # This file is protected by the factory contract and contains assignments only.
+  # このファイルは運用規約で保護されており、変数への代入だけを含みます。
   # shellcheck disable=SC1091
   source .factory/gates.conf
 fi
@@ -51,7 +51,7 @@ for gate in $REQUIRED; do
   case "$gate" in
     types|lint|test|build|audit|mutation|architecture) ;;
     *)
-      echo "error: unknown required gate in .factory/gates.conf: $gate" >&2
+      echo "エラー: .factory/gates.conf に未知の必須ゲートがあります: $gate" >&2
       printf 'FACTORY_GATES: level=%s status=MISCONFIGURED passed=0 failed=0 failing=none skipped=none misconfigured=unknown-required-gate:%s\n' "$LEVEL" "$gate"
       exit 2
       ;;
@@ -68,7 +68,7 @@ c_red()   { printf '\033[31m%s\033[0m\n' "$1"; }
 c_green() { printf '\033[32m%s\033[0m\n' "$1"; }
 c_dim()   { printf '\033[2m%s\033[0m\n' "$1"; }
 
-# run <name> <command...>  - runs a gate, records the verdict, never exits early.
+# run <name> <command...> - ゲートを実行して判定を記録します。途中終了しません。
 run() {
   local name="$1"; shift
   printf '\n=== gate: %s ===\n' "$name"
@@ -94,7 +94,7 @@ has()      { command -v "$1" >/dev/null 2>&1; }
 pkg_has()  { [ -f package.json ] && node -e "process.exit(require('./package.json').scripts?.['$1']?0:1)" 2>/dev/null; }
 
 # ---------------------------------------------------------------------------
-# DETECT - identify the project type. Edit this block for your repo.
+# DETECT - プロジェクトの種類を識別します。リポジトリに合わせて編集してください。
 # ---------------------------------------------------------------------------
 STACK="unknown"
 if   [ -f package.json ];      then STACK="node"
@@ -103,7 +103,7 @@ elif [ -f Cargo.toml ];        then STACK="rust"
 elif [ -f go.mod ];            then STACK="go"
 fi
 
-# Pick the package manager rather than assuming npm.
+# npmと決めつけず、パッケージマネージャーを選びます。
 PM="npm"
 if   [ -f pnpm-lock.yaml ];   then PM="pnpm"
 elif [ -f yarn.lock ];        then PM="yarn"
@@ -115,49 +115,49 @@ PMRUN="$PM run"
 printf 'factory gates | level=%s stack=%s pm=%s\n' "$LEVEL" "$STACK" "$PM"
 
 # ---------------------------------------------------------------------------
-# TIER 1 - fast. Types and lint. Cheap enough to run on every edit.
+# TIER 1 - fast。型検査とlint。編集のたびに実行できる軽量な検査。
 # ---------------------------------------------------------------------------
 case "$STACK" in
   node)
     if pkg_has typecheck;    then run types $PMRUN typecheck
     elif [ -f tsconfig.json ] && has npx; then run types npx --no-install tsc --noEmit
-    else skip types "no typecheck script or tsconfig.json"; fi
+    else skip types "typecheckスクリプトもtsconfig.jsonもありません"; fi
 
     if pkg_has lint;         then run lint $PMRUN lint
     elif has npx && [ -f eslint.config.js -o -f eslint.config.mjs -o -f .eslintrc.json -o -f .eslintrc.cjs ]; then
                                   run lint npx --no-install eslint .
-    else skip lint "no lint script or eslint config"; fi
+    else skip lint "lintスクリプトもeslint設定もありません"; fi
     ;;
   python)
-    if has ruff;  then run lint  ruff check .;  else skip lint  "ruff not installed"; fi
-    if has mypy;  then run types mypy .;        else skip types "mypy not installed"; fi
+    if has ruff;  then run lint  ruff check .;  else skip lint  "ruffが未導入です"; fi
+    if has mypy;  then run types mypy .;        else skip types "mypyが未導入です"; fi
     ;;
   rust)
     run types cargo check --all-targets
     if has cargo-clippy || cargo clippy --version >/dev/null 2>&1; then
       run lint cargo clippy --all-targets -- -D warnings
-    else skip lint "clippy not installed"; fi
+    else skip lint "clippyが未導入です"; fi
     ;;
   go)
     run types go vet ./...
-    if has golangci-lint; then run lint golangci-lint run; else skip lint "golangci-lint not installed"; fi
+    if has golangci-lint; then run lint golangci-lint run; else skip lint "golangci-lintが未導入です"; fi
     ;;
   *)
-    skip types "unknown stack"; skip lint "unknown stack"
+    skip types "不明な技術スタック"; skip lint "不明な技術スタック"
     ;;
 esac
 
 # ---------------------------------------------------------------------------
-# TIER 2 - full. Tests and build. The default gate before any PR.
+# TIER 2 - full。テストとビルド。PR作成前の既定ゲート。
 # ---------------------------------------------------------------------------
 if [ "$LEVEL" = "full" ] || [ "$LEVEL" = "deep" ]; then
   case "$STACK" in
     node)
-      if pkg_has test; then run test $PMRUN test; else skip test "no test script"; fi
-      if pkg_has build; then run build $PMRUN build; else skip build "no build script"; fi
+      if pkg_has test; then run test $PMRUN test; else skip test "testスクリプトがありません"; fi
+      if pkg_has build; then run build $PMRUN build; else skip build "buildスクリプトがありません"; fi
       ;;
     python)
-      if has pytest; then run test pytest -q; else skip test "pytest not installed"; fi
+      if has pytest; then run test pytest -q; else skip test "pytestが未導入です"; fi
       ;;
     rust)
       run test cargo test --all
@@ -167,44 +167,44 @@ if [ "$LEVEL" = "full" ] || [ "$LEVEL" = "deep" ]; then
       run test go test ./...
       run build go build ./...
       ;;
-    *) skip test "unknown stack"; skip build "unknown stack" ;;
+    *) skip test "不明な技術スタック"; skip build "不明な技術スタック" ;;
   esac
 fi
 
 # ---------------------------------------------------------------------------
-# TIER 3 - deep. Security, complexity, mutation, architecture rules.
-# Run on anything touching a load-bearing path (see docs/factory/CHARTER.md).
+# TIER 3 - deep。セキュリティ、複雑性、ミューテーション、アーキテクチャルール。
+# 重要経路に関わる変更で実行します（docs/factory/CHARTER.md参照）。
 # ---------------------------------------------------------------------------
 if [ "$LEVEL" = "deep" ]; then
   case "$STACK" in
     node)
       run audit $PM audit --audit-level=high
       if pkg_has mutation; then run mutation $PMRUN mutation
-      else skip mutation "no 'mutation' script (see CHARTER.md - coverage is not a substitute)"; fi
+      else skip mutation "'mutation'スクリプトがありません（CHARTER.mdを参照。カバレッジでは代替できません）"; fi
       ;;
     python)
-      if has pip-audit; then run audit pip-audit; else skip audit "pip-audit not installed"; fi
-      if has mutmut;    then run mutation mutmut run; else skip mutation "mutmut not installed"; fi
+      if has pip-audit; then run audit pip-audit; else skip audit "pip-auditが未導入です"; fi
+      if has mutmut;    then run mutation mutmut run; else skip mutation "mutmutが未導入です"; fi
       ;;
     rust)
-      if has cargo-audit; then run audit cargo audit; else skip audit "cargo-audit not installed"; fi
+      if has cargo-audit; then run audit cargo audit; else skip audit "cargo-auditが未導入です"; fi
       ;;
     go)
-      if has govulncheck; then run audit govulncheck ./...; else skip audit "govulncheck not installed"; fi
+      if has govulncheck; then run audit govulncheck ./...; else skip audit "govulncheckが未導入です"; fi
       ;;
     *)
-      skip audit "unknown stack"
-      skip mutation "unknown stack"
+      skip audit "不明な技術スタック"
+      skip mutation "不明な技術スタック"
       ;;
   esac
 
-  # Architecture rules: plain grep assertions are enough to start and are
-  # impossible for an agent to argue with. Add your own below.
+  # アーキテクチャルール: 最初は単純なgrepの検査で十分です。
+  # エージェントが言いくるめることもできません。以下に独自ルールを追加してください。
   printf '\n=== gate: architecture ===\n'
   ARCH_FAIL=0
-  # Example rule: nothing outside src/db may import the raw database client.
+  # 例: src/db以外から生のDBクライアントをインポートさせません。
   # if grep -rn "from '.*db/client'" src --include='*.ts' | grep -v '^src/db/'; then
-  #   c_red "architecture: db/client imported outside src/db"; ARCH_FAIL=1
+  #   c_red "アーキテクチャ: src/db外からdb/clientがインポートされています"; ARCH_FAIL=1
   # fi
   if [ "$ARCH_FAIL" -eq 0 ]; then
     c_green "PASS  architecture"; PASSED=$((PASSED + 1))
@@ -214,7 +214,7 @@ if [ "$LEVEL" = "deep" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# VERDICT
+# 判定
 # ---------------------------------------------------------------------------
 STATUS="GREEN"
 EXIT_STATUS=0
@@ -227,15 +227,15 @@ elif [ "$FAILED" -gt 0 ]; then
 fi
 
 printf '\n---------------------------------------------\n'
-[ -n "$SKIPPED" ] && c_dim "skipped: $SKIPPED"
+[ -n "$SKIPPED" ] && c_dim "スキップ: $SKIPPED"
 case "$STATUS" in
-  GREEN) c_green "GATES GREEN ($PASSED passed)" ;;
-  RED) c_red "GATES RED ($FAILED failed: $FAILING)" ;;
-  MISCONFIGURED) c_red "GATES MISCONFIGURED (required gates skipped: $MISCONFIGURED)" ;;
+  GREEN) c_green "GATES GREEN（$PASSED 件合格）" ;;
+  RED) c_red "GATES RED（$FAILED 件不合格: $FAILING）" ;;
+  MISCONFIGURED) c_red "GATES MISCONFIGURED（必須ゲートをスキップ: $MISCONFIGURED）" ;;
 esac
 
-# The machine-readable line. Skills are instructed to quote this verbatim and
-# are forbidden from reporting a result that contradicts it.
+# 機械可読行。スキルにはそのまま引用するよう指示しており、
+# これに矛盾する結果の報告は禁止されています。
 printf 'FACTORY_GATES: level=%s status=%s passed=%d failed=%d failing=%s skipped=%s misconfigured=%s\n' \
   "$LEVEL" "$STATUS" "$PASSED" "$FAILED" "${FAILING:-none}" "${SKIPPED:-none}" "${MISCONFIGURED:-none}"
 

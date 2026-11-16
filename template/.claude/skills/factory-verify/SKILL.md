@@ -1,76 +1,61 @@
 ---
 name: factory-verify
-description: Verify an open factory PR before human review - re-runs gates, checks the test proves the fix, checks scope and test tampering. Use when reviewing a factory PR, running the PR review routine, or asked to independently check a change.
+description: 人間のレビュー前に、開いている Factory PR を検証します。ゲートを再実行し、テストが修正を証明すること、スコープ、テストの改変を確認します。Factory PR のレビュー、PR レビュールーチン、変更の独立確認を求められたときに使用します。
 ---
 
-# Factory verify
+# Factory の検証
 
-Use this when a PR already exists and you are the check standing between it and a human.
-For verification during implementation, the `factory-verifier` subagent is the right tool;
-this skill is the PR-level version and can be driven by a GitHub-triggered routine.
+すでに PR が存在し、あなたが人間の確認に渡す前のチェックを担当するときに使います。実装中の検証には `factory-verifier` サブエージェントが適切です。このスキルは PR 単位の版であり、GitHub を起点とするルーチンでも実行できます。
 
-## Procedure
+## 手順
 
-1. Read `docs/factory/CONTRACT.md`, then `docs/factory/CHARTER.md` for the tier,
-   load-bearing globs, and definition of done.
-2. Check out the PR branch.
-3. Run the required gate level yourself. Do not trust the `FACTORY_GATES` line in the PR
-   body; produce your own and compare. A mismatch is the finding.
-4. Run the checks the deterministic gates cannot make:
-   - Does the test fail without the implementation? Start from a clean committed branch and
-     run `./.factory/scripts/prove-test.sh <base-ref> --test-path <test-path> -- <focused-test-command>`.
-     Do not use `git stash` or an ad hoc destructive revert.
-   - Were pre-existing test files modified? Any change there needs an explicit, argued
-     justification in the PR body.
-   - Does the diff stay inside the declared scope?
-   - Is `done_when` literally true?
-5. For anything touching a load-bearing path, or any PR where the diff looks suspiciously
-   clean, additionally run the `factory-critic` subagent and include its output.
+1. `docs/factory/CONTRACT.md`、続いて `docs/factory/CHARTER.md` を読み、階層、重要な経路の glob、完了の定義を確認します。
+2. PR ブランチをチェックアウトします。
+3. 必須ゲートレベルを自分で実行します。PR 本文の `FACTORY_GATES` 行は信用せず、自分で生成して比較します。不一致が指摘事項です。
+4. 決定的なゲートでは確認できないことを調べます。
+   - 実装がないとテストは失敗するか。クリーンでコミット済みのブランチから `./.factory/scripts/prove-test.sh <base-ref> --test-path <test-path> -- <focused-test-command>` を実行します。`git stash` や場当たり的で破壊的な取り消しは使いません。
+   - 既存のテストファイルが変更されていないか。変更には、PR 本文での明示的かつ根拠を伴う説明が必要です。
+   - 差分は宣言されたスコープ内に収まっているか。
+   - `done_when` は文字どおり真になっているか。
+5. 重要な経路に触れる変更、または不自然なほど問題が見えない差分の PR では、追加で `factory-critic` サブエージェントを実行し、その出力を含めます。
 
-## Reporting
+## 報告
 
-Post one PR comment. Structure it so a human reads the verdict first and the detail only if
-they need it.
+PR コメントを1つ投稿します。人間が最初に判定を読み、必要な場合だけ詳細を読める構成にします。
 
 ```markdown
-### Factory verification
+### Factory の検証
 
-**Verdict:** accepted | accepted-with-reservations | rejected
-**Human read required:** yes (<reason>) | no
+**判定:** accepted | accepted-with-reservations | rejected
+**人間の確認が必要か:** yes (<理由>) | no
 
-<the FACTORY_GATES line, verbatim>
+<FACTORY_GATES 行をそのまま記載>
 
-| Check | Result |
+| 確認項目 | 結果 |
 |---|---|
-| Gates reproduce PR claim | yes / no |
-| Test fails without fix | yes / no / could-not-determine |
-| Pre-existing tests untouched | yes / no |
-| Scope within declared files | yes / no |
-| done_when literally true | yes / no |
+| ゲートで PR の主張を再現できた | yes / no |
+| 修正がないとテストが失敗する | yes / no / could-not-determine |
+| 既存のテストが変更されていない | yes / no |
+| 宣言されたファイルの範囲内 | yes / no |
+| done_when が文字どおり真 | yes / no |
 
-**Must fix**
+**必須修正**
 1. ...
 
-**Critic** (load-bearing changes only)
-<factory-critic output>
+**批判的レビュー**（重要な経路の変更のみ）
+<factory-critic の出力>
 ```
 
-Apply the label `factory:verified` or `factory:rejected`.
+`factory:verified` または `factory:rejected` ラベルを付けます。
 
-Write one unique `verify` run record under `docs/factory/runs/`; do not append to
-`STATE.md`.
+`docs/factory/runs/` に一意の `verify` 実行記録を書きます。`STATE.md` に追記してはいけません。
 
-## What this is for, and what it is not
+## このスキルの目的と、目的でないこと
 
-This routes a human's attention. It is not an approval and it never merges.
+これは人間の注意を適切な場所に向けるためのものです。承認ではなく、決してマージしません。
 
-The value is allocation: a human reads the flagged PRs closely and gives the rest a
-confirming glance, instead of spreading the same attention evenly over everything. That
-reallocation is the whole point, and it only works if the flags are trustworthy, which is
-why the standing bias is to reject when uncertain.
+価値は注意の配分にあります。人間は、すべてに均等な注意を向ける代わりに、フラグの付いた PR を詳しく読み、残りは確認のために目を通します。この再配分こそが目的です。フラグが信頼できなければ機能しないため、不確かなときは却下することを基本とします。
 
-## Standing bias
+## 基本姿勢
 
-Reject when uncertain. A false accept is worse than no verification, because it spends a
-human's trust that was never earned. They will read the next one less carefully because
-this one said it was fine.
+不確かなときは却下します。誤った承認は、獲得していない人間の信頼を消費するため、検証しないより悪い結果になります。今回「問題ない」と言われたことで、人間は次の PR を注意深く読まなくなるからです。

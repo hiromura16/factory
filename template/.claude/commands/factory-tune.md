@@ -1,96 +1,75 @@
 ---
 name: factory-tune
-description: Review factory performance and propose deliberate constraint changes - tighten where a gate let something through, loosen where a class of change has been green long enough.
+description: Factory の実績をレビューして制約の意図的な変更を提案します。ゲートが問題を見逃した箇所は強化し、十分な期間成功を続けた変更の種類については緩和します。
 ---
 
-Constraints set once become either a permanent tax or a permanent hole. This command is the
-scheduled review that keeps them honest. Run it monthly, or after any escaped defect.
+一度設定した制約は、永続的な負担にも、永続的な抜け穴にもなります。このコマンドは、制約を適切に保つための定期レビューです。毎月、または欠陥の見逃しがあった後に実行してください。
 
-It **proposes**. It never edits `CHARTER.md` itself. A factory that can rewrite its own
-constraints has none.
+行うのは**提案**です。`CHARTER.md` 自体は編集しません。自分の制約を書き換えられる Factory に制約はないも同然です。
 
-## Gather evidence
+## 証跡を集める
 
-Look at the last 30 days (or since `LAST_REVIEWED` in the charter). Use immutable records
-under `docs/factory/runs/` plus GitHub issue and PR timestamps:
+過去30日（または憲章の `LAST_REVIEWED` 以降）を確認します。`docs/factory/runs/` の変更されない記録と、GitHub issue・PR の日時を使います。
 
-1. **Merged factory PRs.** How many, and how many needed human fixes after merge?
-2. **Escaped defects.** Anything that reached the default branch and later needed a fix.
-   For each, trace which gate should have caught it. This is the single most valuable
-   input here.
-3. **Rejected verifications.** What did the verifier catch, and is there a pattern? A
-   repeated catch is a candidate for a new deterministic gate, which is strictly better
-   than catching it with a model every time.
-4. **Triage accuracy.** Items marked `ready-to-implement` that turned out to need a spec.
-   A high rate means the charter's `AUTOMATABLE` list is too generous.
-5. **Review queue depth over time.** Was the human review queue the bottleneck?
-6. **Gate configuration.** Which runs were `MISCONFIGURED`? Which optional gates reported
-   `SKIP`, and should any become required?
-7. **Flow.** Median queue age, implementation duration where records are complete, and
-   time from `awaiting-review` to the human decision. State when records are incomplete;
-   do not manufacture precision.
+1. **マージされた Factory PR。** 何件あり、マージ後に人間の修正が必要だったものは何件ですか。
+2. **検出を逃れた欠陥。** デフォルトブランチに入り、後から修正が必要になったものです。それぞれについて、どのゲートが検出すべきだったかを追跡します。これが最も価値の高い入力です。
+3. **検証での却下。** 検証担当は何を見つけ、傾向はありますか。繰り返し見つかる問題は、新しい決定的なゲートの候補です。毎回モデルに検出させるより確実に優れています。
+4. **トリアージの精度。** `ready-to-implement` と分類されたものの、実際には仕様策定が必要だった項目です。割合が高いなら、憲章の `AUTOMATABLE` リストが寛大すぎます。
+5. **時間とともに変わるレビュー待ち件数。** 人間のレビュー待ちがボトルネックでしたか。
+6. **ゲート設定。** `MISCONFIGURED` だった実行はどれですか。どの任意ゲートが `SKIP` となり、必須にすべきものはありますか。
+7. **フロー。** キュー滞留時間の中央値、記録が完全な場合の実装時間、`awaiting-review` から人間の判断までの時間を確認します。記録が不完全なら明示し、見せかけの精度を作らないでください。
 
-## Propose
+## 提案する
 
-### Tighten when
+### 強化する条件
 
-- An escaped defect traces to an automated gate you trusted. **Say exactly which gate and
-  what it missed.** Tighten immediately; this is not a judgment call.
-- A category keeps arriving in review needing real fixes.
-- The verifier catches the same class of problem repeatedly. Propose the deterministic
-  check that would catch it instead, because a gate cannot be talked out of its verdict and
-  a reviewer can.
+- 信頼していた自動ゲートに、見逃した欠陥の原因をたどれる場合。**どのゲートが何を見逃したかを正確に示してください。** 直ちに強化します。これは裁量の問題ではありません。
+- 同じ種類の変更が、実質的な修正を必要とする状態で繰り返しレビューに届く場合。
+- 検証担当が同じ種類の問題を何度も見つける場合。代わりにそれを検出する決定的なチェックを提案します。レビュアーは説得されることがありますが、ゲートの判定は説得では変わらないからです。
 
-### Loosen when
+### 緩和する条件
 
-- A class of change has been green across a long enough run with no escapes. Name the run:
-  "23 dependency bumps over 6 weeks, zero escapes, zero human fixes." Anecdote is not
-  evidence.
-- A rule is producing false stops without ever having prevented a real defect.
+- ある種類の変更が、十分な期間、欠陥の見逃しなく成功し続けた場合。その実績を明示します。「6週間で依存関係更新23件、見逃しゼロ、人間の修正ゼロ」などです。逸話は証拠ではありません。
+- 実際の欠陥を一度も防がず、誤った停止を起こしているルールがある場合。
 
-### Never loosen
+### 決して緩和しないもの
 
-- The merge gate
-- Load-bearing path protection
-- The test-modification rule
-- The requirement that verification be a separate agent from implementation
+- マージのゲート
+- 重要な経路の保護
+- テスト変更ルール
+- 検証を実装とは別のエージェントで行う要件
 
-These are structural. They are not tuned by throughput data because the thing they protect
-against does not show up in throughput data until it is expensive.
+これらは構造的な制約です。防ごうとしている問題は、コストが大きくなるまで処理量のデータには表れないため、処理量に基づいて調整しません。
 
-## Output
+## 出力
 
 ```markdown
-## Factory tuning - <date>
+## Factory の調整 - <日付>
 
-### Evidence
-- Factory PRs merged: <n> (human fixes after merge: <n>)
-- Escaped defects: <n>
-- Verifier rejections: <n>  most common cause: <x>
-- Triage accuracy: <n>% correctly routed
-- Review queue: <avg> / <max> against a charter limit of <n>
-- Gate misconfigurations: <n>  optional skips: <list>
-- Median queue age: <duration>  median review wait: <duration>
+### 証跡
+- マージした Factory PR: <n>（マージ後の人間による修正: <n>）
+- 検出を逃れた欠陥: <n>
+- 検証担当の却下: <n>  最も多い原因: <x>
+- トリアージの精度: <n>% が適切な経路に分類
+- レビュー待ち: <平均> / <最大>、憲章の上限 <n>
+- ゲートの設定不備: <n>  任意ゲートのスキップ: <一覧>
+- キュー滞留時間の中央値: <時間>  レビュー待ち時間の中央値: <時間>
 
-### Proposed: tighten
-1. <change> - because <the specific escape or pattern>
+### 提案: 強化
+1. <変更> - 理由: <具体的な見逃し、または傾向>
 
-### Proposed: loosen
-1. <change> - because <the run of evidence, with numbers>
+### 提案: 緩和
+1. <変更> - 理由: <数値を含む一連の証跡>
 
-### Proposed: new deterministic gate
-1. <check> - replaces a judgment the verifier has made <n> times
+### 提案: 新しい決定的なゲート
+1. <チェック> - 検証担当が <n> 回行った判断を置き換える
 
-### Not proposed but worth saying
-<anything the data shows that no rule change fixes>
+### 変更提案ではないが、伝えるべきこと
+<ルール変更では解決できない、データが示すこと>
 ```
 
-Write the accepted result to `docs/factory/DECISIONS.md` with the date and the evidence, so
-the next review can tell whether a past loosening was a mistake. Then ask the human to
-update `CHARTER.md` and its `LAST_REVIEWED` date.
+承認された結果を、日付と証跡とともに `docs/factory/DECISIONS.md` に記録してください。次回のレビューで、以前の緩和が誤りだったか判断できるようにするためです。その後、人間に `CHARTER.md` とその `LAST_REVIEWED` の日付を更新するよう依頼します。
 
-## The honest question
+## 率直な問い
 
-End every run by asking it explicitly: **is the factory producing work worth the review
-attention it consumes?** Volume is not the metric. If the queue is full of green PRs nobody
-has time to read, the correct tuning is to produce less, not to review faster.
+毎回、最後に明示的に問いかけます。**Factory は、消費するレビューの注意力に見合う価値のある作業を生み出していますか。** 量は指標ではありません。誰も読む時間がない成功済み PR でキューがいっぱいなら、適切な調整はレビューを速くすることではなく、生成量を減らすことです。
