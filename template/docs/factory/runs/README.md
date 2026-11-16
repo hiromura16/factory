@@ -1,15 +1,16 @@
-# Factory run records
+# Factory実行記録
 
-Write one immutable Markdown file per run. This avoids merge conflicts between parallel
-routines and leaves enough structured evidence to measure the factory later.
+実行ごとに変更不可のMarkdownファイルを1つ書きます。
+これにより並列ルーチン間のマージ競合を避け、
+後でFactoryを測定するための十分な構造化された証拠を残せます。
 
-Use a filename that is unique without coordination:
+調整せずに一意になるファイル名を使ってください。
 
 ```
 YYYY-MM-DDTHHMMSSZ-<stage>-<issue-or-run-id>.md
 ```
 
-Start each file with this front matter:
+各ファイルは次のフロントマターで始めます。
 
 ```yaml
 ---
@@ -27,10 +28,10 @@ human_required: true | false
 ---
 ```
 
-Then record what was checked, what changed, what was clean, and why the run stopped. Do not
-include secrets, full transcripts, or copied issue bodies. Link to those systems instead.
+続いて、確認した内容、変更した内容、問題がなかった内容、停止した理由を記録します。
+秘密情報、会話ログ全文、Issue本文のコピーは含めないでください。
+代わりに、それらを管理するシステムへのリンクを記載します。
 
-These records support simple measurements without a separate service: queue age, gate
-failure rate, verifier rejection rate, time to review, and escaped defects linked back to a
-run or pull request.
-
+別のサービスを用意しなくても、この記録から簡単な測定ができます。
+キューの滞留時間、ゲートの失敗率、検証者の却下率、レビューまでの時間、
+実行やPRにひも付けられた検出漏れの欠陥などが対象です。

@@ -1,29 +1,26 @@
-# Factory reference development
+# ファクトリー参照実装の開発
 
-This repository builds and documents a reference software factory. It is the distribution
-repository, not an installed factory. Files under `template/` are copied into another
-repository by `install.sh`.
+このリポジトリはソフトウェアファクトリーの参照実装と文書を提供します。インストール済みファクトリーではなく、配布用リポジトリです。`template/`内のファイルを`install.sh`が別のリポジトリへコピーします。
 
-## Read before changing behavior
+## 動作を変更する前に読む文書
 
-- `README.md` is the public map and product boundary.
-- `GETTING_STARTED.md` is the desktop-first tutorial.
-- `ARCHITECTURE.md` explains the design decisions.
-- `LIMITS.md` records product constraints that may change over time.
-- `template/docs/factory/CONTRACT.md` is the harness-neutral installed policy.
+- `README.md`: 全体像と製品の境界。
+- `GETTING_STARTED.md`: デスクトップを起点とするチュートリアル。
+- `ARCHITECTURE.md`: 設計判断。
+- `LIMITS.md`: 時間とともに変わり得る製品の制約。
+- `template/docs/factory/CONTRACT.md`: 実行基盤に依存しない、インストール先の運用規約。
 
-Preserve the distinction between this repository's contributor instructions and the
-`template/CLAUDE.md` instructions installed in user projects.
+このリポジトリの開発者向け指示と、利用者のプロジェクトへ入れる`template/CLAUDE.md`を区別してください。
 
-## Validation
+## 検証
 
-Run the complete local suite before committing:
+コミット前にローカルの全テストを実行します:
 
 ```bash
 bash tests/run.sh
 ```
 
-For a focused syntax check:
+構文だけを確認する場合:
 
 ```bash
 bash -n install.sh template/.claude/hooks/*.sh template/.claude/scripts/*.sh \
@@ -31,22 +28,17 @@ bash -n install.sh template/.claude/hooks/*.sh template/.claude/scripts/*.sh \
 jq empty template/.claude/settings.json template/.codex/hooks.json
 ```
 
-The tests use disposable repositories. Do not point them at a real project.
+テストは使い捨てリポジトリを使用します。実際のプロジェクトを対象にしないでください。
 
-## Change rules
+## 変更ルール
 
-- Keep `install.sh` idempotent and refuse to overwrite user files.
-- Keep Claude Code as the canonical workflow definition. Codex adapters should remain thin
-  and point to the same contract and workflow files.
-- Treat the charter, required gates, merge boundary, and independent verification rule as
-  protected behavior. A convenience change must not silently weaken them.
-- Update the tutorial when a user-visible install step changes.
-- Date product-specific claims in `LIMITS.md` and verify them against official
-  documentation before changing them.
-- Use small commits whose message names the behavior or documentation boundary changed.
+- `install.sh`の冪等性を維持し、利用者のファイルを上書きしないでください。
+- Claude Codeをワークフロー定義の正本とします。Codexアダプターは薄い層にとどめ、同じ運用規約・ワークフローを参照させます。
+- 憲章、必須ゲート、マージの境界、独立検証のルールは保護対象の動作です。利便性のために暗黙に弱めてはいけません。
+- 利用者向けのインストール手順が変わったらチュートリアルを更新します。
+- `LIMITS.md`の製品固有の記述には日付を付け、変更前に公式文書で確認します。
+- 小さなコミットに分け、変更した動作または文書の範囲をメッセージに記載します。
 
-## Writing
+## 文書の書き方
 
-Write for a programmer trying this on a real repository. Prefer exact paths, commands,
-expected output, and failure behavior over broad claims. State when Claude and Codex differ
-instead of smoothing over the difference.
+実際のリポジトリで試そうとする開発者に向けて書いてください。抽象的な主張より、正確なパス・コマンド・期待する出力・失敗時の動作を示します。ClaudeとCodexの違いは曖昧にせず、明示してください。

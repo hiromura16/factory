@@ -1,11 +1,10 @@
 ---
 name: factory-monitor
-description: Inspect factory health, stale work, CI, security advisories, and recent run evidence without implementing fixes.
+description: 修正は実装せず、Factory の健全性、停滞した作業、CI、セキュリティ勧告、最近の実行証跡を調べます。
 ---
 
-# Factory monitoring for Codex
+# Codex 向け Factory 監視
 
-Read `docs/factory/CONTRACT.md`, `docs/factory/CHARTER.md`, and then the canonical workflow
-in `.claude/skills/factory-monitor/SKILL.md`. Write a unique run record rather than appending
-to shared state.
-
+`docs/factory/CONTRACT.md`、`docs/factory/CHARTER.md`、続いて正本のワークフロー
+`.claude/skills/factory-monitor/SKILL.md` を読んでください。共有状態への追記ではなく、
+一意の実行記録を作成します。

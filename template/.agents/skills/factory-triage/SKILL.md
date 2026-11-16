@@ -1,11 +1,10 @@
 ---
 name: factory-triage
-description: Classify GitHub issues into the factory's live label queue and write an auditable snapshot. Use for backlog triage or a scheduled triage run.
+description: GitHub issue を Factory の現在のラベルキューに分類し、監査可能なスナップショットを作成します。バックログの分類や定期トリアージに使用します。
 ---
 
-# Factory triage for Codex
+# Codex 向け Factory トリアージ
 
-Read `docs/factory/CONTRACT.md`, `docs/factory/CHARTER.md`, and then the canonical workflow
-in `.claude/skills/factory-triage/SKILL.md`. Follow that workflow using the tools available
-in Codex. GitHub labels are the live queue; `QUEUE.md` is only a snapshot.
-
+`docs/factory/CONTRACT.md`、`docs/factory/CHARTER.md`、続いて正本のワークフロー
+`.claude/skills/factory-triage/SKILL.md` を読んでください。Codex で利用可能なツールで
+そのワークフローに従います。GitHub ラベルが現在のキューであり、`QUEUE.md` はスナップショットにすぎません。

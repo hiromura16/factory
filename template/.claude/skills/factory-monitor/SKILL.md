@@ -1,99 +1,74 @@
 ---
 name: factory-monitor
-description: Scheduled health sweep that closes the factory loop - reads CI failures, recent commits, dependency and security advisories, and live queue labels, then files issues and writes an immutable run record. Use for the nightly or weekly monitor routine.
+description: CI の失敗、最近のコミット、依存関係とセキュリティ勧告、現在のキューラベルを読み、issue と変更されない実行記録を作成して Factory のループを閉じる定期点検です。夜間・週次の監視ルーチンに使用します。
 ---
 
-# Factory monitor
+# Factory の監視
 
-This is the stage that closes the loop. Without it a factory only processes work a human
-remembered to file, which means the backlog reflects attention rather than reality.
+これはループを閉じる段階です。これがなければ Factory は人間が登録を覚えていた作業しか処理せず、バックログには現実ではなく注意が向いた範囲だけが反映されます。
 
-**You file issues. You do not fix anything.** Mixing detection and repair in one run means
-a bad detection becomes a bad commit before anyone sees it.
+**issue を登録します。修正は一切行いません。** 同じ実行で検出と修復を混ぜると、誤った検出が誰にも見られないまま誤ったコミットになります。
 
-Read `docs/factory/CONTRACT.md` and `docs/factory/CHARTER.md` first.
+最初に `docs/factory/CONTRACT.md` と `docs/factory/CHARTER.md` を読んでください。
 
-## Sweep
+## 点検
 
-Run each of these. Where a check is not applicable to this repo, say so rather than
-silently skipping it.
+以下をすべて実行します。このリポジトリに該当しないチェックは、黙って省略せずそう伝えてください。
 
-**1. CI failures.** Failed runs on the default branch since the last sweep. For each,
-identify the failing job and whether it is a genuine regression or a flake. A test that
-failed once and passed on rerun is a flake finding, not a bug finding, and it is worth
-tracking separately because flakes are what erode trust in the gates.
+**1. CI の失敗。** 前回の点検以降にデフォルトブランチで失敗した実行を調べます。それぞれ失敗ジョブを特定し、本当の回帰か、不安定なテストかを判別します。一度失敗して再実行で成功したテストはバグではなく不安定さの指摘です。ゲートへの信頼を損なう原因なので、別途追跡する価値があります。
 
-**2. Gate health.** Run `./.claude/scripts/gates.sh deep` on the default branch. A gate
-that is red on `main` means every downstream verdict this week was measured against a
-broken baseline. This is the highest-priority finding the sweep can produce.
+**2. ゲートの健全性。** デフォルトブランチで `./.claude/scripts/gates.sh deep` を実行します。`main` で失敗するゲートがあれば、その週の後続判定はすべて壊れた基準に対して行われています。点検で得られる最優先の指摘です。
 
-Treat `MISCONFIGURED` as a factory-blocking finding. Also report optional skips so a human
-can decide whether they should become required.
+`MISCONFIGURED` は Factory を止める指摘として扱います。任意ゲートのスキップも報告し、人間が必須にすべきか判断できるようにします。
 
-**3. Dependencies and advisories.** New security advisories affecting direct dependencies.
-Group by severity. Do not file an issue per transitive dependency; that is noise that
-trains people to ignore the sweep.
+**3. 依存関係と勧告。** 直接の依存関係に影響する新しいセキュリティ勧告を重大度別にまとめます。推移的依存関係ごとに issue を登録してはいけません。点検を無視するよう人々を慣らす雑音になります。
 
-**4. Queue staleness.** Query live GitHub labels and issue timestamps. Use `QUEUE.md` only
-as supporting history:
-   - `in-progress` with no new commit or run record for 2 hours → flag the deterministic
-     claim branch for human recovery; do not delete or take it over automatically
-   - `awaiting-review` for more than 7 days → the human review queue is the bottleneck,
-     and per the charter's `STOP_IF` the factory should be throttling intake
-   - `wait-to-implement` whose named blocker has since resolved → promote it
-   - `needs-info` with an answer now in the issue comments → send back to triage
+**4. キューの停滞。** GitHub の現在のラベルと issue の日時を検索します。`QUEUE.md` は補助的な履歴としてのみ使います。
+   - `in-progress` で2時間、新しいコミットも実行記録もない → 決定的な確保ブランチを人間による復旧の対象として示します。自動で削除したり引き継いだりしません。
+   - `awaiting-review` が7日を超える → 人間のレビュー待ちがボトルネックです。憲章の `STOP_IF` に従い、Factory は受け入れを抑制すべきです。
+   - `wait-to-implement` の明示された阻害要因が解消済み → 次の状態に進めます。
+   - `needs-info` で issue コメントに回答が付いた → トリアージに戻します。
 
-**5. Comprehension drift.** Files changed by the factory more than 5 times in the last 30
-days with no corresponding update to their documentation or to `docs/factory/DECISIONS.md`.
-These are the places where the code has moved and the written understanding has not, which
-is where the next surprise comes from.
+**5. 理解のずれ。** 過去30日間に Factory が5回を超えて変更したファイルのうち、対応する文書や `docs/factory/DECISIONS.md` が更新されていないものを調べます。コードが変わっても記録された理解が追いついていない場所であり、次の予期せぬ問題が起こる場所です。
 
-**6. Charter gaps.** Anything triage flagged as not covered by `CHARTER.md`. Collect them
-into a single issue for a human decision rather than one issue each.
+**6. 憲章の不足。** `CHARTER.md` の対象外だとトリアージで指摘されたものを調べます。1件ずつではなく、人間の判断用に1つの issue にまとめます。
 
-## Filing
+## issue の登録
 
-For each genuine finding, file a GitHub issue with the `factory:monitor` label. Before
-filing, search open issues for a duplicate; a monitor that refiles the same issue weekly
-gets muted, and a muted monitor is worse than none.
+実際の指摘ごとに `factory:monitor` ラベルを付けた GitHub issue を登録します。登録前に既存の未解決 issue から重複を検索してください。毎週同じ issue を登録する監視は無視され、無視される監視は存在しないより悪い結果になります。
 
-Issue body:
+issue 本文:
 
 ```markdown
-**Detected:** <date> by factory-monitor
-**Category:** ci-failure | gate-health | advisory | queue-staleness | comprehension-drift | charter-gap
-**Severity:** blocks-factory | high | medium | low
+**検出:** <日付>、factory-monitor による
+**分類:** ci-failure | gate-health | advisory | queue-staleness | comprehension-drift | charter-gap
+**重大度:** blocks-factory | high | medium | low
 
-**What**
-<one paragraph>
+**内容**
+<1段落>
 
-**Evidence**
-<log excerpt, gate line, commit range - the actual artifact, not a description of it>
+**証跡**
+<ログ抜粋、ゲート行、コミット範囲。説明ではなく実際の成果物>
 
-**Suggested disposition**
+**推奨する分類**
 ready-to-implement | ready-to-spec | needs-info
 ```
 
-Use `blocks-factory` only for red gates on the default branch or a full review queue. Those
-two conditions mean the factory should stop producing, and the severity should say so.
+`blocks-factory` は、デフォルトブランチでゲートが失敗している場合、またはレビュー待ちが満杯の場合に限って使います。この2つは Factory が作業の生成を停止すべき条件であり、重大度にもそれを表します。
 
-## Report
+## 報告
 
-Write one unique `monitor` run record under `docs/factory/runs/`:
+`docs/factory/runs/` に、一意の `monitor` 実行記録を作成します。
 
-- one line per finding with its issue link
-- the current queue depth by disposition
-- **the review-queue depth**, called out separately, because that is the number that
-  actually constrains the factory
-- what you checked and found clean, so the absence of findings is distinguishable from the
-  absence of checking
+- 指摘ごとに1行、issue へのリンクを含める
+- 分類別の現在のキュー件数
+- **レビュー待ち件数**を別枠で強調する。実際に Factory を制約する数値だからです。
+- 何を確認し、問題がなかったか。指摘がないことと、確認していないことを区別できるようにします。
 
-That last point matters more than it looks. A silent monitor is ambiguous between "nothing
-is wrong" and "the sweep did not run", and those need very different responses.
+最後の点は見た目以上に重要です。静かな監視は「問題なし」と「点検未実施」のどちらにも解釈でき、それぞれに必要な対応は大きく異なります。
 
-## What you never do
+## 絶対に行わないこと
 
-- Fix anything, including one-line fixes that look obviously safe
-- File more than 10 issues in a run. If you found more, file the top 10 by severity and say
-  how many you dropped. **Never silently truncate.**
-- Reopen or comment on issues a human closed
+- 明らかに安全に見える1行の修正も含め、何かを修正すること
+- 1回の実行で10件を超える issue の登録。超えた場合は重大度上位10件を登録し、省いた件数を伝えます。**黙って切り捨ててはいけません。**
+- 人間がクローズした issue の再オープンやコメント

@@ -1,11 +1,10 @@
 ---
 name: factory-spec
-description: Turn an ambiguous factory issue into human-approved product, behavior, design, and implementation slices. Use interactively before implementation.
+description: 曖昧な Factory issue を、人間が承認した製品・振る舞い・設計・実装単位へ具体化します。実装前の対話形式で使用します。
 ---
 
-# Factory specification for Codex
+# Codex 向け Factory 仕様策定
 
-Read `docs/factory/CONTRACT.md`, `docs/factory/CHARTER.md`, and then the canonical workflow
-in `.claude/skills/factory-spec/SKILL.md`. Keep every human approval gate interactive. Use a
-fresh subagent for the critic pass when the workflow requires one.
-
+`docs/factory/CONTRACT.md`、`docs/factory/CHARTER.md`、続いて正本のワークフロー
+`.claude/skills/factory-spec/SKILL.md` を読んでください。人間による承認ゲートは、すべて
+対話形式を維持します。ワークフローで批判的レビューが必要な場合は、新しいサブエージェントを使います。

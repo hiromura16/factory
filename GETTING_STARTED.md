@@ -1,123 +1,105 @@
-# Get started from a desktop app
+# デスクトップアプリから始める
 
-You can reach a safe local dry run without an API key, a custom orchestrator, or a cloud
-routine. This guide installs the factory into one repository, opens that repository in
-Claude Code Desktop or Codex in the ChatGPT desktop app, and uses the agent to help finish
-the project-specific configuration.
+APIキー、独自のオーケストレーター、クラウドルーチンがなくても、安全なローカルのドライランまで進められます。このガイドでは、1つのリポジトリにFactoryをインストールし、そのリポジトリをClaude Code DesktopまたはChatGPTデスクトップアプリのCodexで開いて、エージェントの助けを借りながらプロジェクト固有の設定を仕上げます。
 
-Allow about 15 minutes for the first pass. Use a greenfield or disposable repository while
-you learn the workflow. I would not make a client production repository the first test.
+最初の一通りの作業には約15分を見込んでください。手順を覚える間は、新規開発用または使い捨てのリポジトリを使います。顧客の本番リポジトリを最初の試験対象にすることは勧めません。
 
-## What gets installed
+## インストールされるもの
 
-This repository is a template and installer. You do not build your application inside the
-`factory` repository. The installer copies a small set of committed files into the project
-where you want the factory to run:
+このリポジトリはテンプレートとインストーラーです。アプリケーションを`factory`リポジトリの中で開発するわけではありません。インストーラーは、Factoryを動かす対象プロジェクトへ、コミット済みの少数のファイルをコピーします。
 
-- `CLAUDE.md` and `AGENTS.md` give Claude Code and Codex project context.
-- `.claude/` and `.agents/` contain the workflows each harness can discover.
-- `docs/factory/CHARTER.md` records the work you will permit.
-- `.claude/scripts/gates.sh` turns your existing checks into a deterministic verdict.
-- GitHub labels become the live queue once you explicitly bootstrap them.
+- `CLAUDE.md`と`AGENTS.md`は、Claude CodeとCodexにプロジェクトの背景情報を伝えます。
+- `.claude/`と`.agents/`には、各ハーネスが検出できるワークフローを格納します。
+- `docs/factory/CHARTER.md`には、許可する作業を記録します。
+- `.claude/scripts/gates.sh`は、既存の検査を決定論的な判定にまとめます。
+- GitHubラベルは、明示的に初期設定した後、実際の作業キューになります。
 
-The installer refuses to overwrite existing files. Run it in dry-run mode first anyway;
-safe defaults are useful, but they are not a substitute for reading the diff.
+インストーラーは既存ファイルの上書きを拒否します。それでも、まずドライランで実行してください。安全な既定値は役立ちますが、差分を読むことの代わりにはなりません。
 
-## 1. Clone and install
+## 1. クローンしてインストールする
 
-Clone this repository beside the project you want to configure:
+設定したいプロジェクトと並ぶ場所に、このリポジトリをクローンします。
+
+この日本語版は [Addy Osmani による原版 Factory](https://github.com/addyosmani/factory) のフォークです。以下では日本語版をクローンします。
 
 ```bash
-git clone https://github.com/addyosmani/factory.git
+git clone https://github.com/hiromura16/factory.git
 git clone https://github.com/you/your-project.git
 cd your-project
 ../factory/install.sh --dry-run .
 ../factory/install.sh .
 ```
 
-If your project is already on disk, pass its absolute path instead:
+プロジェクトがすでにディスク上にある場合は、代わりに絶対パスを渡します。
 
 ```bash
 /path/to/factory/install.sh --dry-run /path/to/your-project
 /path/to/factory/install.sh /path/to/your-project
 ```
 
-At this point nothing has been committed, pushed, scheduled, or connected to GitHub. The
-new files are ordinary working-tree changes for you to review.
+この時点では、コミット、push、スケジュール登録、GitHubへの接続は何も行われていません。新しいファイルは、レビュー対象となる通常の作業ツリーの変更です。
 
-## 2. Choose a desktop path
+## 2. デスクトップでの進め方を選ぶ
 
-Both desktop paths use the same charter, gates, queue, and evidence files. Claude Code is
-the primary path and adds cloud sessions and routines. Codex provides an interactive path
-through the same repository contract; this project does not pretend the two products have
-identical schedulers.
+どちらの進め方でも、同じチャーター、ゲート、キュー、証拠ファイルを使います。Claude Codeを主な経路とし、クラウドセッションとルーチンも利用します。Codexは同じリポジトリ契約に沿って対話的に作業するための経路です。このプロジェクトでは、両製品のスケジューラーが同一であるかのようには扱いません。
 
 ### Claude Code Desktop
 
-1. Open the **Code** tab in Claude Code Desktop.
-2. Choose **Local** as the environment and select your target project folder, not the
-   `factory` template folder.
-3. Start in **Plan** mode, or use **Ask permissions** if Plan is unavailable.
-4. Paste this prompt:
+1. Claude Code Desktopの**Code**タブを開きます。
+2. 環境として**Local**を選び、対象プロジェクトのフォルダーを指定します。`factory`テンプレートのフォルダーではありません。
+3. **Plan**モードで開始します。Planが使えない場合は**Ask permissions**を使います。
+4. 次のプロンプトを貼り付けます。
 
 ```text
-Read CLAUDE.md, docs/factory/CONTRACT.md, docs/factory/CHARTER.md, and this
-repository's build and CI files. Help me configure the factory for this project.
+CLAUDE.md、docs/factory/CONTRACT.md、docs/factory/CHARTER.md、およびこの
+リポジトリのビルドとCIのファイルを読んでください。このプロジェクト用にFactoryを設定するのを手伝ってください。
 
-Begin by reporting only. Summarize the project, propose a tier, load-bearing paths,
-automatable work, stop conditions, and the real commands for fast and full gates.
-Ask me for decisions that require product or risk judgment.
+最初は報告だけを行ってください。プロジェクトを要約し、ティア、重要な保護対象パス、
+自動化できる作業、停止条件、fastとfullのゲートに使う実際のコマンドを提案してください。
+製品方針やリスクの判断が必要な事項は、私に確認してください。
 
-Do not edit files, create GitHub labels, commit, push, create routines, or merge.
+ファイルの編集、GitHubラベルの作成、コミット、push、ルーチンの作成、マージはしないでください。
 ```
 
-The useful output is a short configuration proposal grounded in files the agent actually
-found. If it guesses at test commands or project risk, correct that before moving on.
+求めるのは、エージェントが実際に見つけたファイルに基づく簡潔な設定案です。テストコマンドやプロジェクトのリスクを推測していたら、先へ進む前に訂正してください。
 
-Once you have approved the decisions, switch out of Plan mode and paste:
+判断事項を承認したら、Planモードを終了して次を貼り付けます。
 
 ```text
-Using the decisions I approved, update docs/factory/CHARTER.md, .factory/gates.conf,
-and the project-specific commands and conventions near the top of CLAUDE.md.
+私が承認した判断に基づき、docs/factory/CHARTER.md、.factory/gates.conf、
+およびCLAUDE.mdの冒頭付近にあるプロジェクト固有のコマンドと規約を更新してください。
 
-Keep the factory contract and protected-path defaults intact. Run the fast and full
-gates, then ./.factory/scripts/doctor.sh. Stop with the diff and quote the exact
-FACTORY_GATES lines. Do not commit, push, create labels, create routines, or merge.
+Factoryの契約と保護対象パスの既定値は維持してください。fastとfullのゲートを実行し、
+続いて./.factory/scripts/doctor.shを実行してください。差分と正確なFACTORY_GATES行を
+提示したところで停止してください。コミット、push、ラベル作成、ルーチン作成、マージはしないでください。
 ```
 
-Review the visual diff file by file. The official Claude Code Desktop guide documents the
-[project-folder, environment, permission, and diff-review controls](https://code.claude.com/docs/en/desktop).
+表示される差分をファイルごとにレビューしてください。Claude Code Desktopの公式ガイドでは、[プロジェクトフォルダー、環境、権限、差分レビューの操作](https://code.claude.com/docs/en/desktop)を説明しています。
 
-### Codex in the ChatGPT desktop app
+### ChatGPTデスクトップアプリのCodex
 
-1. Open the target project folder as a Codex project.
-2. Confirm that `AGENTS.md` appears in the project and read it before the first task.
-3. Open `/hooks`, inspect the repository hook from `.codex/hooks.json`, and trust it only
-   after the commands and protected paths match what you expect.
-4. Start with a planning or read-only task and paste:
+1. 対象プロジェクトのフォルダーをCodexプロジェクトとして開きます。
+2. プロジェクトに`AGENTS.md`があることを確認し、最初のタスクの前に読みます。
+3. `/hooks`を開き、`.codex/hooks.json`のリポジトリフックを確認します。コマンドと保護対象パスが想定どおりであることを確かめてから、信頼を許可します。
+4. 計画または読み取り専用のタスクから始め、次を貼り付けます。
 
 ```text
-Read AGENTS.md, CLAUDE.md, docs/factory/CONTRACT.md,
-docs/factory/CHARTER.md, and this repository's build and CI files. Help me configure
-the factory for this project.
+AGENTS.md、CLAUDE.md、docs/factory/CONTRACT.md、
+docs/factory/CHARTER.md、およびこのリポジトリのビルドとCIのファイルを読んでください。
+このプロジェクト用にFactoryを設定するのを手伝ってください。
 
-Report first. Summarize the project, propose a tier, load-bearing paths, automatable
-work, stop conditions, and the real commands for fast and full gates. Ask me for the
-product and risk decisions you cannot infer safely.
+最初は報告してください。プロジェクトを要約し、ティア、重要な保護対象パス、自動化できる作業、
+停止条件、fastとfullのゲートに使う実際のコマンドを提案してください。安全に推定できない
+製品方針やリスクの判断は、私に確認してください。
 
-Do not edit files, create GitHub labels, commit, push, or merge.
+ファイルの編集、GitHubラベルの作成、コミット、push、マージはしないでください。
 ```
 
-After approving the proposal, use the same configuration prompt from the Claude section.
-Codex reads [`AGENTS.md`](https://learn.chatgpt.com/docs/agent-configuration/agents-md),
-discovers [repository skills](https://learn.chatgpt.com/docs/build-skills), and can load the
-committed [repository hook](https://learn.chatgpt.com/docs/hooks). The installed adapters
-point back to the canonical Claude workflows so the policy does not fork.
+提案を承認したら、Claudeの節と同じ設定用プロンプトを使います。Codexは[`AGENTS.md`](https://learn.chatgpt.com/docs/agent-configuration/agents-md)を読み、[リポジトリスキル](https://learn.chatgpt.com/docs/build-skills)を検出し、コミット済みの[リポジトリフック](https://learn.chatgpt.com/docs/hooks)を読み込めます。インストールされるアダプターは正規のClaudeワークフローを参照するため、方針が分岐しません。
 
-## 3. Check the result yourself
+## 3. 自分でも結果を確認する
 
-The agent should have run these, but run them once in the integrated terminal so you know
-what healthy output looks like:
+エージェントが実行済みのはずですが、正常な出力を把握するため、統合ターミナルで一度実行してください。
 
 ```bash
 ./.claude/scripts/gates.sh fast
@@ -125,28 +107,25 @@ what healthy output looks like:
 ./.factory/scripts/doctor.sh
 ```
 
-The final gate line should be `status=GREEN`. `MISCONFIGURED` is a useful failure: it means
-a required check could not run, rather than silently treating an absent test command as a
-pass.
+最後のゲート行は`status=GREEN`になるはずです。`MISCONFIGURED`は意味のある失敗です。必須検査が実行できなかったことを示し、テストコマンドがない状態を黙って成功扱いすることを防ぎます。
 
-Now preview the GitHub labels. The first command writes nothing:
+次にGitHubラベルをプレビューします。最初のコマンドは何も書き込みません。
 
 ```bash
 ./.factory/scripts/bootstrap-github.sh
 ```
 
-Only after the preview names the correct repository should you apply them:
+プレビューに正しいリポジトリが表示されたことを確認してから、適用します。
 
 ```bash
 ./.factory/scripts/bootstrap-github.sh --apply
 ```
 
-Configure branch protection or a GitHub ruleset before unattended work. The committed
-hooks block common merge routes, but GitHub remains the enforcement boundary.
+無人実行の前に、ブランチ保護またはGitHubルールセットを設定してください。コミット済みのフックは一般的なマージ経路を遮断しますが、強制力を持つ境界はGitHubです。
 
-## 4. Commit the installation
+## 4. インストール内容をコミットする
 
-Review the whole change before committing:
+コミット前に変更全体をレビューします。
 
 ```bash
 git status --short
@@ -157,40 +136,33 @@ git commit -m "factory: install reference workflow"
 git push
 ```
 
-Cloud sessions always start from a remote clone, so they cannot see the factory until this
-commit has been pushed.
+クラウドセッションは常にリモートからのクローンで開始するため、このコミットをpushするまでFactoryを認識できません。
 
-## 5. Run the first control-room check
+## 5. 最初のコントロールルーム確認を行う
 
-In Claude Code Desktop, type:
+Claude Code Desktopでは、次を入力します。
 
 ```text
 /factory
 ```
 
-In Codex, ask:
+Codexでは、次のように依頼します。
 
 ```text
-Use the factory-status skill to show the control room. Report only; change nothing.
+factory-statusスキルを使ってコントロールルームを表示してください。報告のみで、何も変更しないでください。
 ```
 
-An empty queue is a valid result. Next, ask for a dry-run triage report:
+キューが空でも正常な結果です。次に、トリアージのドライラン報告を依頼します。
 
 ```text
-Run the factory-triage workflow in report-only mode. Do not write files or apply labels.
-Explain every proposed disposition using the charter.
+factory-triageワークフローを報告専用モードで実行してください。ファイルを書き込んだり、ラベルを適用したりしないでください。
+提案する各振り分けについて、チャーターに基づいて説明してください。
 ```
 
-Read the proposed dispositions. A wrong disposition is usually a charter problem. Tighten
-the charter before blaming or retraining the agent; the useful feedback loop starts with a
-constraint you can inspect.
+提案された振り分けを読みます。誤った振り分けは通常、チャーターの問題です。エージェントを責めたり再訓練したりする前に、チャーターを厳密にしてください。有用なフィードバックループは、確認できる制約から始まります。
 
-## Add cloud automation gradually
+## クラウド自動化は段階的に追加する
 
-The desktop setup is enough for interactive use. When its local reports and gates are
-predictable, continue with [QUICKSTART.md](QUICKSTART.md) for Claude cloud sessions,
-GitHub-triggered verification, and routines.
+対話的に使うだけなら、デスクトップの設定で十分です。ローカルでの報告とゲートの結果が予測可能になったら、[QUICKSTART.md](QUICKSTART.md)へ進み、Claudeのクラウドセッション、GitHub起点の検証、ルーチンを追加してください。
 
-Create the triage routine first and let it run for several days. Adding all five routines
-on day one makes failures harder to attribute and can fill the review queue before you know
-whether the charter is doing its job.
+最初にトリアージのルーチンを作り、数日間動かします。初日から5つすべてのルーチンを追加すると、失敗の原因を特定しにくくなり、チャーターが役割を果たしているか分かる前にレビューキューが埋まるおそれがあります。

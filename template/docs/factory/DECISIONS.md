@@ -1,73 +1,73 @@
-# Factory decisions
+# Factoryの判断記録
 
-Why the factory is configured the way it is. Written by a human, informed by
-`/factory-tune`.
+Factoryを現在の構成にしている理由を記録します。`/factory-tune` の情報をもとに、
+人間が記述します。
 
-This file exists so a future tuning pass can tell whether a past loosening was a mistake.
-Without it, every constraint review starts from scratch and the same argument gets had
-twice a year.
+このファイルを残すことで、将来の調整時に過去の制約緩和が誤りだったか判断できます。
+記録がなければ、制約の見直しは毎回ゼロから始まり、同じ議論を半年ごとに繰り返すことになります。
 
-Newest at the top.
-
----
-
-## Template
-
-### 2026-08-16 - <what changed>
-
-**Change:** <the specific rule, before and after>
-
-**Evidence:** <the run of data. "23 dependency bumps over 6 weeks, zero escapes" is
-evidence. "It seemed fine" is not.>
-
-**Risk accepted:** <what this makes more likely, stated plainly>
-
-**Revisit if:** <the observation that would reverse this>
+新しい記録を上に置きます。
 
 ---
 
-## Seed entries
+## テンプレート
 
-### 2026-08-16 - Merge is never automated, on any tier
+### 2026-08-16 - <変更内容>
 
-**Change:** No routine or session may merge, on any tier including `revival`. Enforced by a
-GitHub ruleset or branch protection. Harness hooks block common shell routes as a second
-layer.
+**変更:** <具体的なルールの変更前と変更後>
 
-**Evidence:** Structural rather than empirical. The merge decision is where accountability
-lives, and it is the one point where a human takes responsibility for consequences.
+**証拠:** <蓄積したデータ。「6週間で依存関係を23回更新し、検出漏れゼロ」は
+証拠です。「問題なさそうだった」は証拠ではありません。>
 
-**Risk accepted:** Throughput is capped by human review availability. This is intentional.
-The binding constraint on a factory is decisions pending judgment, not agents running.
+**受け入れるリスク:** <この変更により起こりやすくなることを明確に記述>
 
-**Revisit if:** Never, at any tier.
+**再検討する条件:** <判断を覆すことになる観測結果>
 
 ---
 
-### 2026-08-16 - Verification is a separate agent from implementation
+## 初期の記録
 
-**Change:** `factory-implement` must delegate to the `factory-verifier` subagent and may
-not self-certify.
+### 2026-08-16 - どの運用区分でもマージは自動化しない
 
-**Evidence:** An agent asked to check its own work grades the intent it already had. The
-separation is the only thing that makes a green result mean anything.
+**変更:** `revival` を含むすべての区分で、ルーチンやセッションによるマージを禁止します。
+GitHubルールセットまたはブランチ保護で強制します。実行基盤のフックは第2の防御層として、
+一般的なシェル経由のマージを阻止します。
 
-**Risk accepted:** Roughly doubles token cost per item. Worth it.
+**証拠:** 経験則ではなく、構造上の判断です。説明責任はマージの判断にあり、
+ここが結果に対して人間が責任を引き受ける唯一の時点です。
 
-**Revisit if:** Never. Tune the verifier's strictness instead.
+**受け入れるリスク:** 処理量は人間がレビューできる時間に制限されます。これは意図したものです。
+Factoryの実際の制約は稼働エージェント数ではなく、判断待ちの件数です。
+
+**再検討する条件:** どの区分でも再検討しません。
 
 ---
 
-### 2026-08-16 - Unattended runs may not modify existing test files
+### 2026-08-16 - 検証は実装とは別のエージェントが行う
 
-**Change:** An unattended run stops before modifying a pre-existing test file. An
-interactive session requires explicit human approval, stays draft, and receives a human
-read regardless of gate status.
+**変更:** `factory-implement` は `factory-verifier` サブエージェントに委任し、
+自己認証してはいけません。
 
-**Evidence:** Agents can rewrite assertions to match broken behavior. An unexplained green
-suite after the implementation agent changed the tests is weak evidence and can be
-invisible to ordinary automated checks because everything passes.
+**証拠:** 自分の作業を確認するよう頼まれたエージェントは、自分がすでに持っていた意図を採点します。
+担当を分けることだけが、合格という結果に意味を持たせます。
 
-**Risk accepted:** Legitimate test refactors need a human. Acceptable.
+**受け入れるリスク:** 項目ごとのトークンコストがおよそ2倍になります。それだけの価値があります。
 
-**Revisit if:** Never, while the gates depend on the tests being trustworthy.
+**再検討する条件:** 再検討しません。代わりに検証者の厳しさを調整します。
+
+---
+
+### 2026-08-16 - 無人実行で既存のテストファイルを変更しない
+
+**変更:** 無人実行では既存テストファイルを変更する前に停止します。
+対話セッションでは人間の明示的な承認を必要とし、PRをドラフトに保ち、
+ゲートの状態にかかわらず人間が目視確認します。
+
+**証拠:** エージェントは壊れた挙動に合わせてアサーションを書き換えられます。
+実装エージェントがテストを変更した後に、理由の説明なく全テストが合格しても、
+証拠としては弱いものです。すべて合格するため、通常の自動チェックでは
+問題が見えなくなることもあります。
+
+**受け入れるリスク:** 正当なテストのリファクタリングにも人間が必要になります。許容できます。
+
+**再検討する条件:** ゲートがテストの信頼性に依存する限り、再検討しません。

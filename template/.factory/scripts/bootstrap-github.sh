@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Preview or create the labels used as the factory's live queue.
+# ファクトリーの稼働キューに使うラベルをプレビューまたは作成します。
 
 set -euo pipefail
 
@@ -7,31 +7,31 @@ APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
 
 command -v gh >/dev/null 2>&1 || {
-  echo "error: gh is required to inspect or create factory labels" >&2
+  echo "エラー: ファクトリーのラベルの確認・作成にはghが必要です" >&2
   exit 2
 }
 gh auth status >/dev/null 2>&1 || {
-  echo "error: gh is not authenticated" >&2
+  echo "エラー: ghが未認証です" >&2
   exit 2
 }
 
 labels=(
-  "factory:ready-to-implement|0E8A16|Eligible for one implementation run"
-  "factory:ready-to-spec|FBCA04|Needs interactive product or design decisions"
-  "factory:needs-info|D93F0B|Blocked on a named question"
-  "factory:wait-to-implement|C5DEF5|Understood but blocked on a dependency"
-  "factory:in-progress|1D76DB|Claimed by an implementation run"
-  "factory:awaiting-review|5319E7|Pull request open; human decision required"
-  "factory:verified|0E8A16|Independent verification accepted"
-  "factory:rejected|B60205|Independent verification found a blocker"
-  "factory:monitor|BFDADC|Filed by the factory monitor"
+  "factory:ready-to-implement|0E8A16|1回の実装実行の対象"
+  "factory:ready-to-spec|FBCA04|対話による製品・設計判断が必要"
+  "factory:needs-info|D93F0B|明示された質問への回答待ち"
+  "factory:wait-to-implement|C5DEF5|内容は把握済みだが依存事項の解消待ち"
+  "factory:in-progress|1D76DB|実装実行が担当を確保済み"
+  "factory:awaiting-review|5319E7|PRを作成済み。人による判断が必要"
+  "factory:verified|0E8A16|独立検証に合格"
+  "factory:rejected|B60205|独立検証で阻害要因を検出"
+  "factory:monitor|BFDADC|ファクトリーモニターが起票"
 )
 
 if [ "$APPLY" -eq 0 ]; then
-  echo "Would create or update these labels:"
+  echo "次のラベルを作成または更新します:"
   printf '  %s\n' "${labels[@]%%|*}"
   echo
-  echo "Re-run with --apply to write them."
+  echo "書き込むには--applyを付けて再実行してください。"
   exit 0
 fi
 
@@ -40,5 +40,5 @@ for entry in "${labels[@]}"; do
   gh label create "$name" --color "$color" --description "$description" --force
 done
 
-echo "Factory labels are ready."
+echo "ファクトリーのラベルを準備しました。"
 

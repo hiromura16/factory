@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Prove that a test fails when the non-test portion of a committed change is removed.
-# The working tree must be clean. The script restores it even when the test command fails.
+# コミット済み変更のテスト以外の部分を取り除くと、テストが失敗することを立証します。
+# 作業ツリーはクリーンである必要があります。テストコマンドが失敗しても復元します。
 #
-# Usage:
+# 使い方:
 #   ./.factory/scripts/prove-test.sh <base-ref> --test-path <path> -- <test command...>
 
 set -euo pipefail
 
 BASE="${1:-}"
 if [ -z "$BASE" ]; then
-  echo "usage: $0 <base-ref> [--test-path <path>]... -- <test command...>" >&2
+  echo "使い方: $0 <base-ref> [--test-path <path>]... -- <テストコマンド...>" >&2
   exit 2
 fi
 shift
@@ -17,7 +17,7 @@ shift
 test_paths=()
 while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do
   if [ "$1" != "--test-path" ] || [ "$#" -lt 2 ]; then
-    echo "usage: $0 <base-ref> [--test-path <path>]... -- <test command...>" >&2
+    echo "使い方: $0 <base-ref> [--test-path <path>]... -- <テストコマンド...>" >&2
     exit 2
   fi
   test_paths+=("$2")
@@ -25,7 +25,7 @@ while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do
 done
 
 if [ "${1:-}" != "--" ] || [ "$#" -lt 2 ]; then
-  echo "usage: $0 <base-ref> [--test-path <path>]... -- <test command...>" >&2
+  echo "使い方: $0 <base-ref> [--test-path <path>]... -- <テストコマンド...>" >&2
   exit 2
 fi
 shift
@@ -52,7 +52,7 @@ reverted=0
 restore() {
   if [ "$reverted" -eq 1 ] && [ -s "$patch_file" ]; then
     git apply "$patch_file" >/dev/null 2>&1 || {
-      echo "PROOF: restore failed; patch retained at $patch_file" >&2
+      echo "PROOF: 復元に失敗しました。パッチを保存しました: $patch_file" >&2
       return
     }
   fi

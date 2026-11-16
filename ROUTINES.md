@@ -1,243 +1,208 @@
-# The routines
+# ルーティン
 
-Five routines. Copy each prompt verbatim into a new routine.
+5つのルーティンを用意します。各プロンプトを新しいルーティンへそのままコピーしてください。
 
-**Create them at** [claude.ai/code/routines](https://claude.ai/code/routines), or in the
-Desktop app under **Routines → New routine → Cloud**, or from the CLI with `/schedule`.
-All three write to the same account, so a routine created in one appears in the others.
+**作成場所：** [claude.ai/code/routines](https://claude.ai/code/routines)、Desktopアプリの **Routines → New routine → Cloud**、またはCLIの `/schedule`。いずれも同じアカウントへ保存するため、どこで作成しても他の画面に表示されます。
 
-## Before you start
+## 始める前に
 
-Routines run **fully autonomously**. No permission-mode picker, no approval prompts. What a
-run can reach is set by three things and nothing else:
+ルーティンは**完全に自律的に**動作します。権限モードの選択も承認プロンプトもありません。実行がアクセスできる範囲を決めるのは、次の3つだけです。
 
-1. the repositories you attach
-2. the cloud environment's network access and variables
-3. the connectors you include
+1. 接続したリポジトリ
+2. クラウド環境のネットワークアクセスと変数
+3. 追加したコネクター
 
-Remove every connector the routine does not need. Claude can call every tool from an
-included connector, writes included, without asking during a run.
+不要なコネクターはすべて外してください。Claudeは、追加されたコネクターの全ツールを、書き込みも含めて、実行中に確認せず呼び出せます。
 
-Two facts worth internalizing before you rely on any of this:
+この仕組みに依存する前に、次の2点を理解してください。
 
-- **A green run status does not mean the task succeeded.** It means the session started and
-  exited without an infrastructure error. Open the run and read it.
-- **Routines act as you.** Commits and PRs carry your GitHub user; connector actions use
-  your linked accounts.
+- **実行ステータスが緑でもタスク成功とは限りません。** インフラエラーなしでセッションが開始・終了したことを示すだけです。実行を開いて内容を読んでください。
+- **ルーティンはあなたとして動作します。** コミットとPRにはあなたのGitHubユーザーが使われ、コネクター操作にはあなたが接続したアカウントが使われます。
 
-## Budget
+## 利用予算
 
-Routines draw down normal subscription usage and have a **separate daily cap on runs
-started per account**. Check remaining runs at
-[claude.ai/settings/usage](https://claude.ai/settings/usage).
+ルーティンは通常のサブスクリプション使用量を消費し、さらに**アカウントごとの1日あたりの開始実行数に別の上限**があります。[claude.ai/settings/usage](https://claude.ai/settings/usage)で残りの実行数を確認してください。
 
-The five below are sized to fit comfortably. Do not set triage hourly on a repo that gets
-three issues a week; you will burn the cap and learn nothing.
+以下の5つは、無理なく収まる頻度にしています。週に3件しかIssueが来ないリポジトリで、毎時トリアージを設定しないでください。上限を消費するだけで、得られるものはありません。
 
-| Routine | Trigger | Roughly |
+| ルーティン | トリガー | おおよその回数 |
 |---|---|---|
-| 1. Triage | Schedule, daily 07:00 | 1 run/day |
-| 2. Implement | Schedule, weekdays 08:00 | 1 run/weekday |
-| 3. PR verify | GitHub `pull_request.opened` | per PR |
-| 4. Monitor | Schedule, Monday 06:00 | 1 run/week |
-| 5. Alert triage | API | on demand |
+| 1. トリアージ | 毎日07:00のスケジュール | 1日1回 |
+| 2. 実装 | 平日08:00のスケジュール | 平日1回 |
+| 3. PR検証 | GitHub `pull_request.opened` | PRごと |
+| 4. 監視 | 月曜06:00のスケジュール | 週1回 |
+| 5. アラートのトリアージ | API | 必要時 |
 
-Minimum schedule interval is **one hour**. For a custom cron, pick the closest preset in
-the form then run `/schedule update` in the CLI.
-
----
-
-## 1. Triage
-
-**Trigger:** Schedule, daily, 07:00 local
-**Repos:** your repo
-**Connectors:** none (built-in GitHub tools are enough)
-
-```
-Run the factory-triage skill from this repository's .claude/skills directory.
-
-Read docs/factory/CONTRACT.md and docs/factory/CHARTER.md first and treat them as binding.
-If the charter does not cover an item, classify it needs-info rather than guessing.
-
-Treat GitHub issue labels as the live queue. docs/factory/QUEUE.md is an audit snapshot,
-not the handoff to implementation.
-
-Use the built-in GitHub tools to read open issues that have no factory state label (the
-factory:monitor provenance label does not count), plus any
-issue updated since the last triage run record. Cap at 20
-issues, most recently updated first, and state the number you skipped.
-
-For each issue, assign exactly one disposition: ready-to-implement, ready-to-spec,
-needs-info, or wait-to-implement. Apply the matching factory: state label on GitHub,
-removing any other state label first but preserving factory:monitor. Write a queue snapshot
-entry in the exact format given in the skill, including a checkable done_when. Create or
-update the issue's factory-handoff:v1 comment with the same done_when, expected files, gate
-level, and confidence. The label plus that comment are the operational handoff.
-
-Bias toward the slower path. If you are not confident an item is automatable, mark it
-ready-to-spec.
-
-Write a unique triage record under docs/factory/runs/. Commit the QUEUE.md snapshot and
-run record to a claude/ branch and open a pull request
-titled "factory: triage <date>". Do not implement anything. Do not merge.
-
-End your run with the counts per disposition and an explicit list of anything the
-charter did not cover.
-```
-
-> **Why polling rather than an event trigger:** routine GitHub triggers support
-> `pull_request` and `release` events only. There is no `issues` trigger. If you need
-> instant triage, see `template/.github/workflows/factory-fire.yml`. Daily is fine for
-> most repos.
+スケジュールの最小間隔は**1時間**です。独自cronを使う場合は、フォームで最も近いプリセットを選んでから、CLIで `/schedule update` を実行します。
 
 ---
 
-## 2. Implement
+## 1. トリアージ
 
-**Trigger:** Schedule, weekdays, 08:00 local (an hour after triage)
-**Repos:** your repo
-**Connectors:** none
+**トリガー：** スケジュール、毎日、現地時間07:00
+**リポジトリ：** 対象リポジトリ
+**コネクター：** なし（組み込みGitHubツールで十分）
 
 ```
-Run the factory-implement skill from this repository's .claude/skills directory.
+このリポジトリの .claude/skills ディレクトリにある factory-triage スキルを実行してください。
 
-Read docs/factory/CONTRACT.md, then docs/factory/CHARTER.md. Query GitHub issues carrying
-factory:* labels and read the latest factory-handoff:v1 comment. Do not use QUEUE.md as the
-live handoff. A missing or conflicting handoff moves the issue to factory:needs-info.
+最初に docs/factory/CONTRACT.md と docs/factory/CHARTER.md を読み、拘束力のある規則として扱ってください。
+憲章が扱っていない項目は推測せず needs-info に分類してください。
 
-First check the stop conditions in the charter. If the number of issues labeled
-factory:awaiting-review is at or above the charter's limit, stop immediately, write a
-unique stopped run record under docs/factory/runs/, and end the run. Do not implement
-anything. A full review queue is the binding constraint on this factory.
+GitHub Issue のラベルを実キューとして扱ってください。docs/factory/QUEUE.md は監査用スナップショットであり、
+実装への引き継ぎではありません。
 
-Otherwise pick exactly ONE issue labeled factory:ready-to-implement, highest confidence
-first. Claim the deterministic remote branch exactly as the skill describes. If the push
-loses the race, stop. After a successful claim, replace the label with factory:in-progress
-and confirm the write before editing. Implement only that item.
+組み込みGitHubツールで、ファクトリー状態ラベルのない未完了Issue（出自を示す factory:monitor は
+状態ラベルに数えない）と、最後のトリアージ実行記録以降に更新されたIssueを読んでください。
+更新が新しい順に最大20件を扱い、省略した件数を明記してください。
 
-Write the failing test before the implementation. In an unattended run, do not modify any
-existing test file.
-Run ./.claude/scripts/gates.sh at the level the item specifies and iterate until the
-FACTORY_GATES line reads status=GREEN. MISCONFIGURED blocks the run.
+各Issueに、ready-to-implement、ready-to-spec、needs-info、wait-to-implement の
+いずれか1つだけを割り当ててください。他の状態ラベルを先に外してから対応する factory: 状態ラベルを
+GitHubで付け、factory:monitor は保持してください。検証可能な done_when を含め、スキルの厳密な形式で
+キュースナップショットの項目を記録してください。同じ done_when、想定ファイル、ゲートレベル、確信度で
+Issueの factory-handoff:v1 コメントを作成または更新してください。ラベルとこのコメントが運用上の引き継ぎです。
 
-Commit the scoped implementation and test, then confirm the working tree and index are
-clean before verification.
+遅い経路を優先してください。自動化可能と確信できなければ ready-to-spec にしてください。
 
-Then delegate verification to the factory-verifier subagent using the Agent tool. Give
-it the queue item, branch name, and verified base SHA only, not your account of what you did. If it
-returns verdict: rejected, fix what it names and repeat. After two rejections, stop and
-hand the item back.
+docs/factory/runs/ に一意なトリアージ記録を書いてください。QUEUE.md スナップショットと実行記録を
+claude/ ブランチにコミットし、"factory: triage <date>" というタイトルのPRを作成してください。
+実装は何も行わず、マージもしないでください。
 
-Open a draft pull request using the template in the skill. Quote the FACTORY_GATES line
-verbatim. Replace factory:in-progress with factory:awaiting-review and write a unique
-implementation run record. Never merge.
+最後に分類ごとの件数と、憲章が扱っていなかった項目の明示的な一覧を示してください。
+```
 
-If the work turns out to touch a load-bearing path listed in the charter, stop, move the
-item to ready-to-spec with the reason, and end the run.
+> **イベントではなくポーリングにする理由：** ルーティンのGitHubトリガーが対応するのは `pull_request` と `release` だけで、`issues` トリガーはありません。即時トリアージが必要なら `template/.github/workflows/factory-fire.yml` を参照してください。多くのリポジトリでは日次で十分です。
+
+---
+
+## 2. 実装
+
+**トリガー：** スケジュール、平日、現地時間08:00（トリアージの1時間後）
+**リポジトリ：** 対象リポジトリ
+**コネクター：** なし
+
+```
+このリポジトリの .claude/skills ディレクトリにある factory-implement スキルを実行してください。
+
+docs/factory/CONTRACT.md、続いて docs/factory/CHARTER.md を読んでください。
+factory:* ラベル付きのGitHub Issueを検索し、最新の factory-handoff:v1 コメントを読んでください。
+QUEUE.md を実際の引き継ぎに使わないでください。引き継ぎがない、または矛盾する場合は factory:needs-info に移してください。
+
+最初に憲章の停止条件を確認してください。factory:awaiting-review のIssue数が憲章の上限以上なら、
+即座に停止し、docs/factory/runs/ に一意な停止記録を書いて終了してください。実装は何も行わないでください。
+満杯のレビュー待ちキューが、このファクトリーの制約です。
+
+そうでなければ、factory:ready-to-implement のIssueを確信度が最も高いものから、必ず1件だけ選んでください。
+スキルの記述どおりの決定的なリモートブランチで担当を確保してください。pushの競合に負けたら停止してください。
+確保に成功したらラベルを factory:in-progress に置き換え、書き込み成功を確認してから編集してください。
+実装するのはその1件だけです。
+
+実装の前に失敗するテストを書いてください。無人実行では既存テストファイルを一切変更しないでください。
+項目で指定されたレベルで ./.claude/scripts/gates.sh を実行し、FACTORY_GATES 行が status=GREEN になるまで
+修正してください。MISCONFIGURED は実行を阻止します。
+
+範囲内の実装とテストをコミットし、検証前に作業ツリーとインデックスがクリーンであることを確認してください。
+
+次にAgentツールで factory-verifier サブエージェントへ検証を委任してください。
+渡すのはキュー項目、ブランチ名、確認済みベースSHAだけで、自分の作業説明は渡さないでください。
+verdict: rejected が返ったら、指摘を修正して再試行してください。2回却下されたら停止して項目を差し戻してください。
+
+スキルのテンプレートでドラフトPRを作成してください。FACTORY_GATES 行を一字一句そのまま引用してください。
+factory:in-progress を factory:awaiting-review に置き換え、一意な実装実行記録を残してください。
+マージは禁止です。
+
+作業が憲章に記された重要な基盤パスへ触れると分かったら、停止し、理由を付けて ready-to-spec に移し、終了してください。
 ```
 
 ---
 
-## 3. PR verify
+## 3. PR検証
 
-**Trigger:** GitHub event → `pull_request.opened`
-**Filter:** `Is draft` is `false`, or leave unfiltered to cover drafts too
-**Repos:** your repo
-**Connectors:** none
+**トリガー：** GitHubイベント → `pull_request.opened`
+**フィルター：** `Is draft` を `false` に設定。ドラフトも対象にするなら未設定
+**リポジトリ：** 対象リポジトリ
+**コネクター：** なし
 
-This is the one stage that gets a real event trigger. Requires the
-[Claude GitHub App](https://github.com/apps/claude) installed on the repo. `/web-setup`
-alone grants clone access but does **not** enable webhooks.
+実際のイベントトリガーを使う唯一の段階です。リポジトリに[Claude GitHub App](https://github.com/apps/claude)をインストールする必要があります。`/web-setup` だけではクローン権限しか得られず、Webhookは有効になりません。
 
 ```
-Run the factory-verify skill from this repository's .claude/skills directory.
+このリポジトリの .claude/skills ディレクトリにある factory-verify スキルを実行してください。
 
-Read docs/factory/CHARTER.md. Check out the pull request branch.
+docs/factory/CHARTER.md を読み、PRのブランチをチェックアウトしてください。
 
-Run ./.claude/scripts/gates.sh yourself at the level the charter requires for the paths
-this PR touches. Do not trust any FACTORY_GATES line already in the PR body; produce
-your own and compare them. A mismatch is the finding.
+PRが触れるパスについて憲章が要求するレベルで ./.claude/scripts/gates.sh を自分で実行してください。
+PR本文にある FACTORY_GATES 行は信用せず、自分で生成して比較してください。不一致があれば指摘事項です。
 
-Then make the checks the gates cannot:
-- From a clean committed branch, use ./.factory/scripts/prove-test.sh to remove non-test
-  hunks reversibly and confirm the new test fails without the fix.
-- Check whether any pre-existing test file was modified.
-- Check the diff stays inside the scope the queue item declared.
-- Check whether done_when is literally true.
+次に、ゲートではできない検査を行ってください。
+- クリーンなコミット済みブランチから ./.factory/scripts/prove-test.sh を使い、テスト以外の差分を
+  復元可能な形で取り除き、修正がなければ新しいテストが失敗することを確認する。
+- 既存テストファイルが変更されていないか確認する。
+- 差分がキュー項目で宣言された範囲内に収まるか確認する。
+- done_when が文字どおり成立しているか確認する。
 
-If the PR touches any load-bearing path in the charter, also run the factory-critic
-subagent and include its output.
+憲章の重要な基盤パスに触れるPRなら factory-critic サブエージェントも実行し、出力を含めてください。
 
-Post one PR comment in the format the skill specifies, verdict first. Apply
-factory:verified or factory:rejected. Write a unique verify run record.
+スキルが指定する形式で、判定を先頭にしたPRコメントを1つ投稿してください。
+factory:verified または factory:rejected を付け、一意な検証実行記録を残してください。
 
-Reject when uncertain. Never approve and never merge.
+不確実なら却下してください。承認もマージもしないでください。
 ```
 
 ---
 
-## 4. Monitor
+## 4. 監視
 
-**Trigger:** Schedule, weekly, Monday 06:00 local
-**Repos:** your repo
-**Connectors:** Slack or Linear if you want the summary pushed somewhere
+**トリガー：** スケジュール、週次、月曜現地時間06:00
+**リポジトリ：** 対象リポジトリ
+**コネクター：** 要約を送りたい場合はSlackまたはLinear
 
 ```
-Run the factory-monitor skill from this repository's .claude/skills directory.
+このリポジトリの .claude/skills ディレクトリにある factory-monitor スキルを実行してください。
 
-Sweep, in this order:
-1. CI failures on the default branch since the last sweep, separating genuine
-   regressions from flakes.
-2. Run ./.claude/scripts/gates.sh deep on the default branch. Red gates on main are the
-   highest-priority finding possible: every verdict since it broke was measured against
-   a broken baseline. Also report every gate showing SKIP.
-3. New security advisories on direct dependencies, grouped by severity.
-4. Stale live queue labels: in-progress with no activity for 2 hours, awaiting-review over
-   7 days, wait-to-implement whose blocker has resolved, and needs-info that now has an
-   answer in the comments. Never steal or delete a stale claim automatically.
-5. Files the factory changed more than 5 times in 30 days with no documentation update.
-6. Charter gaps collected by triage, as one combined issue.
+次の順序で点検してください。
+1. 前回点検以降のデフォルトブランチのCI失敗。本当の回帰と不安定なテストを区別する。
+2. デフォルトブランチで ./.claude/scripts/gates.sh deep を実行する。mainの赤いゲートは最優先事項。
+   壊れた後の判定はすべて壊れた基準で測定されているため。SKIPのゲートもすべて報告する。
+3. 直接依存に対する新しいセキュリティ勧告。重大度別にまとめる。
+4. 古くなった実キューラベル。2時間活動のない in-progress、7日超の awaiting-review、阻害要因が
+   解消した wait-to-implement、コメントに回答が付いた needs-info。古い担当確保を勝手に奪ったり削除したりしない。
+5. 30日間でファクトリーが5回を超えて変更し、文書が更新されていないファイル。
+6. トリアージが収集した憲章の不足。1つのIssueにまとめる。
 
-File at most 10 GitHub issues with the factory:monitor label, searching for duplicates
-first. If you found more than 10, file the top 10 by severity and state how many you
-dropped. Never silently truncate.
+重複を先に検索し、factory:monitor ラベル付きのGitHub Issueを最大10件登録してください。
+10件を超えたら重大度の高い上位10件を登録し、省略数を示してください。黙って切り捨てないでください。
 
-Fix nothing. Write a unique monitor record under docs/factory/runs/ recording what you
-found AND what you checked and found clean, plus the current review-queue depth called out
-separately. Open a PR with the run record.
+修正は何も行わないでください。発見事項と、検査して問題がなかった項目の両方を記録し、現在のレビュー待ち件数を
+別に明示した一意な監視記録を docs/factory/runs/ に書いてください。実行記録のPRを作成してください。
 ```
 
 ---
 
-## 5. Alert triage (optional)
+## 5. アラートのトリアージ（任意）
 
-**Trigger:** API
-**Repos:** your repo
+**トリガー：** API
+**リポジトリ：** 対象リポジトリ
 
-For Sentry, a monitoring tool, a deploy pipeline, or anything that can make an
-authenticated POST. Add the API trigger from the web, generate the token, and store it in
-that tool's secret store. **The token is shown once.**
+Sentry、監視ツール、デプロイパイプラインなど、認証付きPOSTを送れるものに使います。WebからAPIトリガーを追加し、トークンを生成して、そのツールのシークレット保管場所へ保存してください。**トークンが表示されるのは一度だけです。**
 
 ```
-An alert has fired. Investigate the alert described in the routine-fire-payload block.
+アラートが発生しました。routine-fire-payload ブロックに記されたアラートを調査してください。
 
-Read docs/factory/CHARTER.md first.
+最初に docs/factory/CHARTER.md を読んでください。
 
-Pull the stack trace or error detail from the payload, correlate it with recent commits
-on the default branch, and identify the most likely cause.
+ペイロードからスタックトレースまたはエラー詳細を取り出し、デフォルトブランチの最近のコミットと照合して、
+最も可能性の高い原因を特定してください。
 
-Then do exactly one of:
-- If the cause is clear AND the fix touches no load-bearing path AND matches an
-  AUTOMATABLE entry in the charter: open a DRAFT pull request with the fix, gates green,
-  verified by the factory-verifier subagent.
-- Otherwise: open a GitHub issue with your diagnosis, the evidence, and what you would
-  need in order to proceed. Label it factory:needs-info.
+次のどちらか一方だけを行ってください。
+- 原因が明確で、修正が重要な基盤パスに触れず、憲章の AUTOMATABLE 項目に一致する場合：
+  修正し、ゲートを成功させ、factory-verifier サブエージェントで検証したドラフトPRを作成する。
+- それ以外：診断、証拠、先へ進むために必要なものを記したGitHub Issueを作成し、factory:needs-info を付ける。
 
-Never merge. In an unattended run, never modify an existing test file. If you are unsure which branch of the
-above applies, take the second.
+マージは禁止です。無人実行では既存テストファイルを変更しないでください。
+どちらに当てはまるか不明なら、後者を選んでください。
 ```
 
-Fire it:
+呼び出し例：
 
 ```bash
 curl -X POST https://api.anthropic.com/v1/claude_code/routines/<ROUTINE_ID>/fire \
@@ -245,39 +210,32 @@ curl -X POST https://api.anthropic.com/v1/claude_code/routines/<ROUTINE_ID>/fire
   -H "anthropic-beta: experimental-cc-routine-2026-04-01" \
   -H "anthropic-version: 2023-06-01" \
   -H "Content-Type: application/json" \
-  -d '{"text": "Sentry SEN-4521 fired in prod. <stack trace>"}'
+  -d '{"text": "本番環境でSentry SEN-4521が発生。<stack trace>"}'
 ```
 
-> The `text` you send arrives wrapped in a `<routine-fire-payload>` block labelled as
-> untrusted data. The prompt above opts in by referencing it explicitly. That wrapper is
-> deliberate: anyone holding the token can send text, so it must arrive as data rather
-> than as instructions. Do not write prompts that try to defeat it.
+> 送信した `text` は、信頼できないデータとして扱われる `<routine-fire-payload>` ブロックに包まれて届きます。上のプロンプトは明示的に参照して利用を認めています。このラッパーは意図的なものです。トークンを持つ人は誰でもテキストを送れるため、指示ではなくデータとして届く必要があります。これを無効化しようとするプロンプトを書かないでください。
 
 ---
 
-## Managing routines from the CLI
+## CLIからルーティンを管理する
 
 ```bash
-/schedule list                    # all routines
-/schedule update                  # change one, including a custom cron
-/schedule run                     # fire immediately
-/schedule why did my nightly triage do nothing this morning?
+/schedule list                    # 全ルーティンを一覧表示
+/schedule update                  # 変更。独自cronも設定可能
+/schedule run                     # 即時実行
+/schedule 毎晩のトリアージが今朝は何もしなかったのはなぜですか？
 ```
 
-That last form reads the run log and explains what happened, including tool errors and
-blocked network requests, which is faster than opening the web UI.
+最後の形式は実行ログを読み、ツールエラーや遮断されたネットワーク要求も含めて経緯を説明します。Web UIを開くより速く確認できます。
 
-## Local counterparts
+## ローカル版
 
-For the tiers where the factory needs your actual working tree rather than a fresh clone,
-create the same routines as **Local** in the Desktop app (Routines → New routine → Local):
+新しいクローンではなく実際の作業ツリーが必要な階層では、Desktopアプリで同じルーティンを **Local** として作成します（Routines → New routine → Local）。
 
-- runs on your machine with real file access
-- **enable the worktree toggle** so parallel runs do not collide
-- only fires while the app is open and the machine is awake
-- minimum interval 1 minute rather than 1 hour
-- prompt lives at `~/.claude/scheduled-tasks/<name>/SKILL.md` and is editable on disk
+- 実際のファイルへアクセスし、手元のマシンで動作する
+- 並列実行が競合しないよう、**worktreeの切り替えを有効にする**
+- アプリが開いていて、マシンが起動している間だけ実行する
+- 最小間隔は1時間ではなく1分
+- プロンプトは `~/.claude/scheduled-tasks/<name>/SKILL.md` に保存され、ディスク上で編集できる
 
-Use Local for uncommitted work and machine-local tooling. Use Cloud for everything else.
-Cloud is the default because a factory that requires your laptop to be open is not a
-factory.
+未コミットの作業とマシン固有のツールにはLocal、それ以外にはCloudを使います。ノートPCを開いておく必要がある仕組みはファクトリーとは言えないため、標準はCloudです。

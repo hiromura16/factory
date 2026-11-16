@@ -2,70 +2,70 @@
 
 <One paragraph: what this is and who depends on it.>
 
-## Commands
+上の仮記入箇所は、何をするプロジェクトで誰が依存しているかを説明する1段落に置き換えてください。
+
+## コマンド
 
 ```bash
-<install>        # e.g. pnpm install
-<dev>            # e.g. pnpm dev
-<test>           # e.g. pnpm test
-./.claude/scripts/gates.sh full   # the factory's deterministic verdict
+<install>        # 例: pnpm install
+<dev>            # 例: pnpm dev
+<test>           # 例: pnpm test
+./.claude/scripts/gates.sh full   # Factoryの決定論的な判定
 ```
 
-## Conventions
+## 規約
 
-<Language, framework, module layout, patterns to follow, patterns to avoid.
-Keep this short and specific. Vague style guidance produces vague code.>
+<言語、フレームワーク、モジュール構成、従うパターン、避けるパターン。
+短く具体的に記述します。曖昧なスタイル指針からは曖昧なコードが生まれます。>
 
 ---
 
-# Factory rules
+# Factoryのルール
 
-This repository runs a software factory. Read `docs/factory/CONTRACT.md`, then
-`docs/factory/CHARTER.md`, before acting. The contract is shared with Codex through
-`AGENTS.md`; it is the source of truth for queue semantics and non-negotiable rules.
-For first-time setup and the local dry run, follow `docs/factory/README.md`.
+このリポジトリはソフトウェアFactoryを運用します。作業前に
+`docs/factory/CONTRACT.md`、続いて `docs/factory/CHARTER.md` を読んでください。
+契約は `AGENTS.md` を通じてCodexと共有され、キューの意味と変更不可のルールの正本です。
+初期設定とローカルでのドライランは `docs/factory/README.md` に従ってください。
 
-## Read first
+## 最初に読むこと
 
-The live queue is GitHub issue labels plus `factory-handoff:v1` comments.
-`docs/factory/QUEUE.md` is a snapshot for humans and audit, so an unmerged snapshot must
-never be used as the handoff between routines.
+実際のキューはGitHubのIssueラベルと `factory-handoff:v1` コメントです。
+`docs/factory/QUEUE.md` は人間の確認と監査用のスナップショットなので、
+未マージのスナップショットをルーチン間の引き継ぎに使ってはいけません。
 
-## Non-negotiable
+## 変更不可のルール
 
-1. **Never merge.** GitHub branch protection is the enforcement boundary; the local hook is
-   a second layer.
-2. **Never edit factory policy** unless the human explicitly asks in this session. Protected
-   paths are listed in the contract.
-3. **Never modify an existing test in an unattended run.** An interactive change needs
-   explicit human approval and a human read.
-4. **Gates fail closed.** Quote the `FACTORY_GATES:` line verbatim. `RED`,
-   `MISCONFIGURED`, and required skips all block progress.
-5. **Verification uses a fresh context.** Delegate to `factory-verifier`.
-6. **Claim one live issue per run.** Win the deterministic remote-branch claim described in
-   the contract, then replace `factory:ready-to-implement` with `factory:in-progress`.
+1. **マージしない。** 強制力のある境界はGitHubのブランチ保護で、ローカルフックは第2の防御層です。
+2. **Factoryのポリシーを編集しない。** ただし、このセッションで人間が明示的に依頼した場合を除きます。
+   保護対象パスは契約に記載されています。
+3. **無人実行で既存のテストを変更しない。** 対話中の変更には人間の明示的な承認と目視確認が必要です。
+4. **ゲートは失敗時に停止する。** `FACTORY_GATES:` 行をそのまま引用してください。
+   `RED`、`MISCONFIGURED`、必須チェックのスキップはいずれも先に進めません。
+5. **検証には新しいコンテキストを使う。** `factory-verifier` に委任してください。
+6. **1回の実行で引き受ける実際のIssueは1件。** 契約にある決定論的なリモートブランチによる
+   担当確保に成功してから、`factory:ready-to-implement` を `factory:in-progress` に置き換えます。
 
-## Stopping conditions
+## 停止条件
 
-Stop and hand back to a human when any of these is true:
+次のいずれかに該当したら停止し、人間に引き継いでください。
 
-- gates went red twice on the same item
-- the work turns out to touch a `LOAD_BEARING` path
-- the diff would exceed the charter's line limit
-- the item is still ambiguous after one clarification attempt
-- the review queue is already at the charter's limit
+- 同じ項目でゲートが2回赤になった
+- 作業が `LOAD_BEARING` パスに触れることが分かった
+- 差分が憲章の行数制限を超える
+- 1回確認を試みても項目が曖昧なままである
+- レビュー待ちキューがすでに憲章の上限に達している
 
-The last one is the important one and the easiest to ignore. The constraint on this factory
-is not how many agents can run in parallel. It is how many decisions are pending a human's
-judgment at once. When that queue is full, producing more is not progress.
+最後の条件は重要で、最も見落としやすいものです。Factoryの制約は並列で動かせる
+エージェント数ではありません。人間の判断を同時にいくつ待てるかです。
+キューが満杯のときに成果物を増やしても、進捗にはなりません。
 
-## State lives in files, not conversations
+## 状態は会話ではなくファイルに残す
 
-Write one immutable record under `docs/factory/runs/` using its documented format. Update
-GitHub labels for operational state. Sessions end and transcripts are not the queue.
+`docs/factory/runs/` に、規定の形式で変更不可の記録を1件書いてください。
+運用上の状態はGitHubラベルで更新します。セッションには終わりがあり、会話ログはキューではありません。
 
-## Writing for the next reader
+## 次に読む人のために書く
 
-Commit messages and PR bodies are written for someone who was not in this session and
-cannot ask you what you were thinking. On a `client-production` repo, assume that reader is
-not the author and the time is six months from now.
+コミットメッセージとPR本文は、このセッションに参加しておらず、書き手の考えを
+質問できない人に向けて書きます。`client-production` のリポジトリでは、
+読み手は作者ではなく、6か月後に読むと想定してください。

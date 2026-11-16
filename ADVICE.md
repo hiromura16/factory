@@ -1,180 +1,114 @@
-# Pragmatic advice: start with the harness
+# 実践的な助言：まずハーネスから始める
 
-**You can get surprisingly far with a coding harness, a clear work item, and repository-level
-instructions. Start there. Add Factory when repeated, unattended work needs durable state,
-consistent handoffs, bounded verification, and an explicit place for human judgment.**
+**コーディングハーネス、明確な作業項目、リポジトリ単位の指示だけでも、驚くほど多くのことができます。まずはそこから始めましょう。繰り返しの無人作業に、永続的な状態、一貫した引き継ぎ、範囲を定めた検証、人間が判断する明確な場が必要になったらFactoryを追加してください。**
 
-Product-specific details below were checked in August 2026. Goals, schedules, and cloud
-automation are moving quickly, so re-check the linked documentation before making them part
-of a critical workflow.
+以下の製品固有の詳細は2026年8月に確認したものです。目標機能、スケジュール、クラウド自動化は急速に変化しているため、重要なワークフローへ組み込む前にリンク先のドキュメントを再確認してください。
 
-## A software factory can start as a prompt
+## ソフトウェアファクトリーはプロンプトから始められる
 
-A useful software factory is a repeatable loop around software work. It takes an input such
-as a GitHub issue, gathers context, makes a change, verifies the result, and hands the work
-back at a boundary you chose. That first version does not require a queue service, an agent
-SDK, or a custom control plane.
+役立つソフトウェアファクトリーとは、ソフトウェア作業を繰り返し可能にするループです。GitHub Issueなどを入力として受け取り、文脈を集め、変更し、結果を検証し、自分で決めた境界で仕事を引き渡します。最初の形にキューサービス、エージェントSDK、独自の制御基盤は不要です。
 
-Claude Code already has an agentic loop that gathers context, acts, verifies, and repeats.
-It also has [`/goal`](https://code.claude.com/docs/en/goal) for working toward a measurable
-end state, [`/loop`](https://code.claude.com/docs/en/scheduled-tasks) for repeated prompts,
-and [routines](https://code.claude.com/docs/en/routines) for cloud work started by a
-schedule, API call, or supported GitHub event.
+Claude Codeには、文脈収集、実行、検証を繰り返すエージェントループがあります。測定可能な到達点に向かって作業する [`/goal`](https://code.claude.com/docs/en/goal)、プロンプトを繰り返す [`/loop`](https://code.claude.com/docs/en/scheduled-tasks)、スケジュール・API呼び出し・対応するGitHubイベントでクラウド作業を始める[ルーティン](https://code.claude.com/docs/en/routines)もあります。
 
-Codex has similar building blocks, although the product vocabulary is different. It can
-[follow a goal](https://learn.chatgpt.com/use-cases/follow-goals) across turns and run
-[scheduled tasks](https://learn.chatgpt.com/docs/automations) from ChatGPT on the web or
-desktop. Codex does not currently document a direct equivalent to Claude Code's `/loop`
-command. Use a goal when completion is the trigger, or a scheduled task when time is the
-trigger.
+Codexにも、用語は異なるものの同様の構成要素があります。複数ターンにわたって[目標を追求](https://learn.chatgpt.com/use-cases/follow-goals)でき、Web版またはデスクトップ版ChatGPTから[定期タスク](https://learn.chatgpt.com/docs/automations)を実行できます。現時点でCodexには、Claude Codeの `/loop` コマンドに直接相当する機能の説明はありません。完了が起点なら目標機能、時間が起点なら定期タスクを使います。
 
-Both harnesses can carry durable repository context. Claude Code reads `CLAUDE.md`; Codex
-reads [`AGENTS.md`](https://learn.chatgpt.com/docs/agent-configuration/agents-md). Skills
-can package a workflow, while hooks and ordinary scripts can turn some written expectations
-into mechanical checks. This is enough to automate a meaningful amount of work.
+どちらのハーネスも、リポジトリの文脈を永続化できます。Claude Codeは `CLAUDE.md`、Codexは [`AGENTS.md`](https://learn.chatgpt.com/docs/agent-configuration/agents-md) を読みます。ワークフローはスキルにまとめられ、フックや通常のスクリプトで文章の要件の一部を機械的な検査にできます。これだけで、相当量の仕事を自動化できます。
 
-## The useful minimum
+## 役立つ最小構成
 
-Start with one work item. A GitHub issue, a short spec, or a checked-in task list is fine.
-Give the agent the information a capable engineer would need:
+まず作業項目を1つ用意します。GitHub Issue、短い仕様書、コミット済みのタスクリストのどれでも構いません。有能なエンジニアが必要とする情報をエージェントへ渡します。
 
-- the outcome and acceptance criteria;
-- the files, packages, or services that are in scope;
-- constraints, including paths it must not change;
-- the commands that demonstrate correctness;
-- the point where a human must review or decide;
-- a stop condition for missing context, failing infrastructure, or unexpected risk.
+- 目標と受け入れ基準
+- 対象のファイル、パッケージ、サービス
+- 変更してはいけないパスなどの制約
+- 正しさを示すコマンド
+- 人間がレビューまたは判断すべき境界
+- 文脈不足、インフラ障害、想定外のリスクに対する停止条件
 
-Then put the rules that apply to every task in the repository. For a monorepo, keep common
-budgets and checks at the root and add narrower instructions close to the package they
-govern. Useful shared rules include supported runtimes, dependency policy, accessibility
-requirements, test commands, performance budgets, security-sensitive paths, and the rule
-that an agent opens a draft pull request rather than merging its own work.
+次に、すべてのタスクに共通するルールをリポジトリへ置きます。モノレポなら、共通の予算や検査をルートに置き、個別の指示を対象パッケージの近くに追加します。対応ランタイム、依存関係の方針、アクセシビリティ要件、テストコマンド、性能予算、セキュリティ上重要なパス、自分でマージせずドラフトPRを作成するという規則などが役立ちます。
 
-Across several repositories, keep the common policy in one versioned template or skill and
-install a pinned copy into each project. Leave project-specific exceptions beside the code
-they govern, and periodically ask the harness to report which instructions it loaded. This
-is less clever than a central policy service, but it is easy to inspect and works with a
-normal clone.
+複数のリポジトリでは、共通ポリシーをバージョン管理したテンプレートやスキルにまとめ、固定した版を各プロジェクトへ導入します。プロジェクト固有の例外は対象コードの近くへ置き、どの指示を読み込んだかを定期的にハーネスへ報告させます。中央のポリシーサービスほど巧妙ではありませんが、点検しやすく、通常のクローンで機能します。
 
-A first prompt can be quite plain:
+最初のプロンプトは、単純なもので構いません。
 
 ```text
-Read GitHub issue #123 and the repository instructions before changing code.
+コードを変更する前に、GitHub Issue #123 とリポジトリの指示を読んでください。
 
-Implement only the stated acceptance criteria. Do not modify authentication,
-billing, migrations, or existing test assertions. Work in a branch and keep the
-diff reviewable.
+記載された受け入れ基準だけを実装してください。認証、課金、マイグレーション、
+既存テストのアサーションは変更しないでください。ブランチで作業し、
+レビューしやすい差分にしてください。
 
-Run npm run lint, npm test, and npm run build. If a required check cannot run,
-stop and explain why. Open a draft pull request with the checks you ran, the
-remaining risks, and any decision a human still needs to make. Do not merge.
+npm run lint、npm test、npm run build を実行してください。必須検査を実行
+できなければ停止し、理由を説明してください。実行した検査、残るリスク、
+人間の判断が必要な事項を記したドラフトPRを作成してください。マージは禁止です。
 ```
 
-That is a small factory loop. A goal can keep it moving until the checks pass. A scheduled
-task with GitHub access can poll for issues with a particular label or review open pull
-requests each morning. Branch protection can enforce the merge boundary. The human stays in
-the loop by choosing what becomes ready, reviewing the draft pull request, and making the
-final merge decision.
+これが小さなファクトリーループです。目標機能を使えば、検査に合格するまで進められます。GitHubへアクセスできる定期タスクで、特定ラベルのIssueをポーリングしたり、毎朝未完了PRをレビューしたりできます。マージの境界はブランチ保護で強制できます。人間は着手可能な仕事を選び、ドラフトPRをレビューし、最後のマージを判断することで関与し続けます。
 
-Try this before adding orchestration. Watch where the process actually loses information or
-requires repeated steering.
+オーケストレーションを追加する前に、これを試してください。どこで実際に情報が失われるか、繰り返しの誘導が必要になるかを観察します。
 
-## When the harness is probably enough
+## ハーネスだけで十分な場合
 
-I would stay with the stock harness when most of the following are true:
+次の条件の大部分を満たすなら、標準ハーネスのままにしておくことを勧めます。
 
-- one person or a small team can still understand the active queue;
-- work is interactive, or a small number of scheduled jobs covers the unattended work;
-- an issue or spec plus repository instructions reliably produces a reviewable change;
-- CI and branch rules already enforce the important quality and merge boundaries;
-- failures can return to the same person without a formal handoff protocol;
-- there are few enough concurrent sessions that duplicate claims and conflicting branches
-  are unusual;
-- a pull request, its checks, and its comments are a sufficient audit trail.
+- 1人または小規模チームが現在のキューを把握できる
+- 作業が対話的、または少数の定期ジョブで無人作業を賄える
+- Issueや仕様書とリポジトリ指示で、安定してレビュー可能な変更を作れる
+- CIとブランチルールが、重要な品質とマージの境界をすでに強制している
+- 正式な引き継ぎプロトコルがなくても、失敗を同じ人へ戻せる
+- 同時セッションが少なく、担当の重複やブランチの競合が珍しい
+- PR、検査結果、コメントだけで監査証跡として十分である
 
-This setup can handle feature batches, dependency updates, bug triage, pull request review,
-documentation maintenance, and other work with clear inputs and observable outcomes. It is
-also easier to tune because there are fewer abstractions between the prompt and the result.
+この構成で、まとまった機能追加、依存関係更新、不具合のトリアージ、PRレビュー、文書保守など、入力が明確で結果を観測できる仕事を扱えます。プロンプトと結果の間の抽象化が少ないため、調整もしやすくなります。
 
-## What Factory adds
+## Factoryが追加するもの
 
-Factory becomes useful when the prompt is no longer the hard part. The hard part is making
-separate runs behave consistently, handing work between agents, preventing two sessions
-from claiming the same issue, preserving evidence, and stopping production when human
-review is falling behind.
+Factoryが役立つのは、プロンプト自体が難所ではなくなったときです。別々の実行を一貫して動かすこと、エージェント間の引き継ぎ、2つのセッションによる同じIssueの担当確保の防止、証拠の保存、人間のレビューが遅れた際の作業停止が難所になります。
 
-This reference adds a shared protocol around the harness:
+この参照実装は、ハーネスの周りに共通プロトコルを追加します。
 
-- GitHub labels own live queue state, with deterministic claims to prevent duplicate work;
-- a charter records the human-owned risk boundary and paths that need extra care;
-- Claude Code and Codex use the same contract rather than drifting into separate policies;
-- gate scripts emit a deterministic verdict and fail closed when a required check is missing;
-- implementation and independent verification are separate roles;
-- run records preserve what happened after the chat transcript is gone;
-- back-pressure stops new work when the review queue exceeds its human-owned limit;
-- every successful run ends at a draft pull request. A human still merges.
+- 実キューの状態はGitHubラベルが管理し、決定的な担当確保で重複作業を防ぐ
+- 憲章に、人間が決めるリスクの境界と特に注意すべきパスを記録する
+- Claude CodeとCodexが別ポリシーへ乖離せず、同じ契約を使う
+- ゲートスクリプトが決定的な判定を出し、必須検査が欠ければ安全側に倒して失敗する
+- 実装と独立検証を別の役割にする
+- チャット履歴が消えても、実行記録に経緯が残る
+- レビュー待ちが人間の定めた上限を超えたら、バックプレッシャーで新規作業を止める
+- 成功した実行はドラフトPRで終わる。マージは引き続き人間が行う
 
-These controls are useful for unattended work, multiple repositories, multiple harnesses,
-or a queue large enough that its state no longer fits in one person's head. Factory's main
-return is consistency, evidence, and safer handoffs. An individual feature may finish more
-slowly because it now passes through more boundaries.
+これらは、無人作業、複数リポジトリ、複数ハーネス、1人では状態を把握できない大きなキューに有効です。Factoryの主な効果は一貫性、証拠、安全な引き継ぎです。境界が増えるため、個々の機能の完成は遅くなる場合があります。
 
-## Budget the verification, too
+## 検証にも予算を設ける
 
-Verification is where a responsible factory spends much of its time. This is desirable up
-to the point where repeated checks add delay without adding useful evidence.
+責任あるファクトリーは、多くの時間を検証に使います。有益ですが、同じ検査の繰り返しが証拠を増やさず遅延だけを増やす段階では見直しが必要です。
 
-Suppose a full suite takes eight minutes. Ten separately claimed features consume at least
-80 minutes of full-suite time if each passes once. If an independent verifier runs the same
-suite again, the lower bound becomes 160 minutes before retries, environment setup, browser
-checks, or human review. The implementation can be quick while the batch still feels slow.
+完全なテストスイートに8分かかるとします。別々に担当を確保した10機能がそれぞれ1回で合格しても、全体テストだけで最低80分かかります。独立した検証担当が同じスイートを再実行すると、再試行、環境設定、ブラウザ検査、人間のレビューを含める前から最低160分です。実装自体が速くても、全体は遅く感じられます。
 
-Treat verification as a budget:
+検証を予算として扱ってください。
 
-- run fast checks such as types, lint, and focused tests while shaping the change;
-- run the full suite at the pull request boundary and after the final material fix;
-- reserve deep security, mutation, architecture, or broad end-to-end checks for risk that
-  warrants them, or run them on a separate cadence;
-- group closely related changes when they have one acceptance boundary and remain easy to
-  review. Atomic should describe a coherent unit, not the smallest possible diff;
-- cap failed verification attempts and ask a human to resolve ambiguity instead of looping
-  indefinitely;
-- measure elapsed time, reruns, false rejections, escaped defects, and human review time.
-  Adjust a gate when the evidence says it is too weak or too expensive.
+- 変更を作り込む間は、型、lint、対象を絞ったテストなどの速い検査を使う
+- PRを作る境界と、最後の重要な修正後に完全なスイートを実行する
+- 深いセキュリティ、ミューテーション、アーキテクチャ、広範なE2E検査は相応のリスクがあるときに使うか、別の頻度で実行する
+- 受け入れの境界が1つでレビューしやすいなら、密接な変更をまとめる。アトミックとは最小の差分ではなく、一貫した単位である
+- 検証失敗の試行回数に上限を設け、無限ループの代わりに人間へ曖昧さの解消を求める
+- 所要時間、再実行、誤却下、見逃した不具合、人間のレビュー時間を測定し、弱すぎる・高コストすぎるという証拠があればゲートを調整する
 
-The defaults in this repository lean conservative because unattended changes should earn
-trust. They are still defaults. A two-minute documentation fix and an authentication
-migration should not pay the same verification cost.
+このリポジトリの既定値は保守的です。無人の変更には信頼を得る必要があるからです。それでも既定値にすぎません。2分の文書修正と認証の移行に、同じ検証コストを課すべきではありません。
 
-## A practical progression
+## 現実的な導入順序
 
-For most repositories, I would adopt these ideas incrementally:
+多くのリポジトリでは、段階的に導入することを勧めます。
 
-1. Start with a well-written issue or spec and one explicit implementation prompt.
-2. Move repeated constraints into `CLAUDE.md`, `AGENTS.md`, and deterministic project
-   scripts.
-3. Add a goal for bounded long-running work. Add a schedule only after the prompt succeeds
-   interactively.
-4. Let the agent open draft pull requests, while CI, branch rules, and a human own shipping.
-5. Install Factory when queue state, handoffs, independent verification, or back-pressure
-   solve a problem you have actually observed.
-6. Consider a custom orchestrator only when stock schedules, goals, GitHub, and repository
-   state cannot express a requirement you genuinely need.
+1. よく書かれたIssueや仕様書と、明示的な実装プロンプト1つから始める。
+2. 繰り返し使う制約を `CLAUDE.md`、`AGENTS.md`、決定的なプロジェクトスクリプトへ移す。
+3. 範囲の定まった長時間作業には目標機能を追加する。対話的に成功してからスケジュールを追加する。
+4. エージェントにドラフトPRを作らせ、リリースはCI、ブランチルール、人間が管理する。
+5. キュー状態、引き継ぎ、独立検証、バックプレッシャーが、実際に観察した問題を解決するときにFactoryを導入する。
+6. 標準のスケジュール、目標機能、GitHub、リポジトリの状態では本当に必要な要件を表現できない場合にだけ、独自オーケストレーターを検討する。
 
-The [Reel Good demo](https://github.com/addyosmani/factory-demo) and its
-[step-by-step workshop](https://github.com/addyosmani/factory-demo/blob/main/docs/WORKSHOP.md)
-show the fuller path. You can use the early checkpoint to try the harness-only approach,
-then compare it with the installed Factory workflow.
+[Reel Goodデモ](https://github.com/addyosmani/factory-demo)と[段階的なワークショップ](https://github.com/addyosmani/factory-demo/blob/main/docs/WORKSHOP.md)で、より完全な導入過程を確認できます。最初のチェックポイントでハーネスだけの方法を試し、Factory導入後のワークフローと比較してください。
 
-## Product documentation
+## 製品ドキュメント
 
-- Claude Code: [how the agentic loop works](https://code.claude.com/docs/en/how-claude-code-works),
-  [goals](https://code.claude.com/docs/en/goal),
-  [loops and scheduled tasks](https://code.claude.com/docs/en/scheduled-tasks), and
-  [cloud routines](https://code.claude.com/docs/en/routines).
-- Codex: [goals](https://learn.chatgpt.com/use-cases/follow-goals),
-  [scheduled tasks](https://learn.chatgpt.com/docs/automations),
-  [`AGENTS.md`](https://learn.chatgpt.com/docs/agent-configuration/agents-md),
-  [skills](https://learn.chatgpt.com/docs/build-skills), and
-  [hooks](https://learn.chatgpt.com/docs/hooks).
+- Claude Code：[エージェントループの仕組み](https://code.claude.com/docs/en/how-claude-code-works)、[目標](https://code.claude.com/docs/en/goal)、[ループと定期タスク](https://code.claude.com/docs/en/scheduled-tasks)、[クラウドルーティン](https://code.claude.com/docs/en/routines)。
+- Codex：[目標](https://learn.chatgpt.com/use-cases/follow-goals)、[定期タスク](https://learn.chatgpt.com/docs/automations)、[`AGENTS.md`](https://learn.chatgpt.com/docs/agent-configuration/agents-md)、[スキル](https://learn.chatgpt.com/docs/build-skills)、[フック](https://learn.chatgpt.com/docs/hooks)。

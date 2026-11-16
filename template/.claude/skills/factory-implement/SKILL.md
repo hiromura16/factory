@@ -1,40 +1,27 @@
 ---
 name: factory-implement
-description: Claim one live GitHub queue item, implement it end to end, run fail-closed gates and independent verification, then open a draft PR. Use for one ready-to-implement issue or the implementation routine.
+description: GitHub の現在のキュー項目を1件確保し、最初から最後まで実装して、安全側に倒すゲートと独立検証を実行し、ドラフト PR を作成します。ready-to-implement の issue 1件、または実装ルーチンに使用します。
 ---
 
-# Factory implementation
+# Factory の実装
 
-You implement **exactly one queue item per run**. Not two. If you finish early, stop.
+**1回の実行で実装するのは、キュー項目を厳密に1件だけ**です。2件ではありません。早く終わったら停止します。
 
-Batching items is how a single wrong assumption becomes a wide diff nobody can review.
+項目をまとめて処理すると、1つの誤った前提が、誰もレビューできない広範囲の差分になってしまいます。
 
-## Before writing any code
+## コードを書く前に
 
-1. Read `docs/factory/CONTRACT.md`, then `docs/factory/CHARTER.md`.
-2. Query GitHub for open issues labeled `factory:ready-to-implement`. The live label is
-   authoritative; read the latest `factory-handoff:v1` comment for `done_when`, expected
-   files, gate level, and confidence. `QUEUE.md` is only a snapshot. If the handoff is
-   missing, duplicated, malformed, or inconsistent with the charter, move the issue to
-   `factory:needs-info` and stop. If running locally without GitHub access, stop unless a
-   human explicitly selects an item for an interactive run.
-3. Select one item and win the deterministic remote-branch claim described below. Only
-   after that push succeeds, replace `factory:ready-to-implement` with
-   `factory:in-progress`. Re-read the issue after the write. If either step failed, stop.
-4. Re-read `done_when`. This is your stopping condition. You are done when it is true and
-   gates are green, not when the code looks finished.
-5. Check the item against `LOAD_BEARING` yourself. Triage can be wrong. If the work turns
-   out to touch a load-bearing path, **stop**, move the item to `ready-to-spec`, and record
-   why. Do not proceed carefully; proceed not at all.
+1. `docs/factory/CONTRACT.md`、続いて `docs/factory/CHARTER.md` を読みます。
+2. GitHub で `factory:ready-to-implement` ラベルの未解決 issue を検索します。現在のラベルが正本です。最新の `factory-handoff:v1` コメントから `done_when`、想定ファイル、ゲートレベル、確信度を読みます。`QUEUE.md` はスナップショットにすぎません。引き継ぎが欠落、重複、不正な形式、または憲章と矛盾している場合は、issue を `factory:needs-info` に移して停止します。ローカル実行で GitHub にアクセスできない場合は、人間が対話実行用の項目を明示的に選ばない限り停止します。
+3. 1件を選び、下記の決定的なリモートブランチによる確保に成功してください。その push が成功して初めて、`factory:ready-to-implement` を `factory:in-progress` に置き換えます。書き込み後に issue を再読します。どちらかが失敗したら停止します。
+4. `done_when` を再読します。これが停止条件です。コードが完成して見えるときではなく、条件が真でゲートが成功したときに完了です。
+5. 自分自身でも `LOAD_BEARING` に照らして確認します。トリアージが誤っている場合があります。重要な経路に触れると分かったら、**停止**し、項目を `ready-to-spec` に移して理由を記録します。慎重に続けるのではなく、一切続行してはいけません。
 
-If the review queue is already at the charter limit, do not claim an item. Stop and record
-the back-pressure condition.
+レビュー待ちがすでに憲章の上限に達していたら、項目を確保しないでください。停止し、受け入れを抑制した条件を記録します。
 
-## Branch
+## ブランチ
 
-From the current default branch, create the deterministic branch
-`claude/fq-<issue-number>`. Add an empty commit whose message includes the unique run ID,
-then push it without force:
+現在のデフォルトブランチから、決定的な名前 `claude/fq-<issue-number>` のブランチを作成します。一意の実行 ID をメッセージに含む空コミットを追加し、force を使わず push します。
 
 ```bash
 git switch -c claude/fq-<issue-number>
@@ -42,129 +29,103 @@ git commit --allow-empty -m "factory: claim FQ-<issue-number> (<run-id>)"
 git push origin HEAD:refs/heads/claude/fq-<issue-number>
 ```
 
-Two sessions may read the ready label at the same time. Their claim commits differ, so only
-the first push can create the remote ref; a later push is rejected as non-fast-forward.
-Treat that rejection as "already claimed" and stop. Never force the branch.
+2つのセッションが同時に着手可能ラベルを読むことがあります。確保用コミットが異なるため、最初の push だけがリモート参照を作成でき、後の push は非 fast-forward として拒否されます。その拒否は「確保済み」と扱い、停止してください。ブランチを force push してはいけません。
 
-In a cloud session the `claude/` prefix is accepted for pushes. Do not add a slug or use a
-different branch: the deterministic name is the lock.
+クラウドセッションでは、push に `claude/` プレフィックスを使用できます。説明用の語を追加したり、別のブランチを使ったりしないでください。この決定的な名前がロックです。
 
-## Implementing
+## 実装
 
-Work in the smallest diff that satisfies `done_when`.
+`done_when` を満たす最小の差分で作業します。
 
-**Write the failing test first.** Not as ceremony: the test is what converts "I believe
-this works" into a machine-checkable fact, and it is the artifact the verifier uses to
-decide whether you actually fixed anything. If you cannot write a test that fails before
-your change and passes after, say so explicitly in the PR body and flag the item for a
-human read.
+**失敗するテストを先に書いてください。** 儀式ではありません。テストは「動くと思う」を機械で確認できる事実に変え、検証担当が本当に何かを修正したかを判断するための成果物です。変更前に失敗し、変更後に成功するテストを書けない場合は、PR 本文で明示し、人間の確認が必要だと示してください。
 
-Rules while implementing:
+実装中のルール:
 
-- **Do not modify existing test files in an unattended run.** In an interactive session,
-  stop and obtain explicit human approval before doing so. The PR stays draft and requires
-  a human read.
-- Do not add abstractions the item does not need. One caller means no interface.
-- Do not clean up unrelated code. Note it for the queue instead.
-- Do not add dependencies. If one is genuinely required, stop; that is a `ready-to-spec`
-  decision.
-- Stay inside `files_expected` where possible. Every file beyond it is a signal that the
-  triage estimate was wrong, and if the count exceeds the charter's limit, stop.
+- **無人実行では既存のテストファイルを変更しないでください。** 対話セッションでは、その前に停止して人間の明示的な承認を得ます。PR はドラフトのままとし、人間による確認が必要です。
+- 項目に不要な抽象化を追加しないでください。呼び出し元が1つならインターフェースは不要です。
+- 無関係なコードを整理しないでください。代わりにキュー用に記録します。
+- 依存関係を追加しないでください。本当に必要なら停止します。それは `ready-to-spec` の判断です。
+- 可能な限り `files_expected` の範囲内に留まります。範囲外のファイルはどれもトリアージの見積もりが誤っていた兆候であり、件数が憲章の上限を超えたら停止します。
 
-## Gates
+## ゲート
 
-Run the gate level the queue item specifies:
+キュー項目で指定されたゲートレベルを実行します。
 
 ```bash
 ./.claude/scripts/gates.sh full
 ```
 
-Iterate until the final line reads `status=GREEN`. `status=MISCONFIGURED` blocks the run;
-do not edit the gate configuration yourself to make it pass.
+最終行が `status=GREEN` になるまで反復します。`status=MISCONFIGURED` なら実行を止めます。通すために自分でゲート設定を変更してはいけません。
 
-**You must quote the `FACTORY_GATES:` line verbatim in your PR body.** You may not
-describe the result in your own words instead, and you may not report success if that line
-says `status=RED`. If gates go red twice in a row on the same item, stop and hand it back
-per the charter's `STOP_IF`.
+**PR 本文には `FACTORY_GATES:` 行をそのまま引用しなければなりません。** 自分の言葉による説明で代用してはいけません。その行が `status=RED` なら成功と報告してはいけません。同じ項目でゲートが2回連続失敗したら、憲章の `STOP_IF` に従い停止して人間に戻します。
 
-Report optional skipped gates in the PR body. A required skip produces
-`MISCONFIGURED`, so it cannot be mistaken for green.
+任意ゲートのスキップは PR 本文に報告します。必須ゲートのスキップは `MISCONFIGURED` となるため、成功と取り違えません。
 
-Commit the scoped implementation and test after gates are green, then confirm both the
-index and working tree are clean. The verifier's reversible negative-test proof refuses a
-dirty checkout so it cannot hide or overwrite unrelated work.
+ゲートが成功したら、スコープ内の実装とテストをコミットし、インデックスと作業ツリーの両方がクリーンであることを確認します。検証担当が行う可逆的な否定テストの証明は、無関係な作業を隠したり上書きしたりしないよう、未整理のチェックアウトを拒否します。
 
-## Independent verification
+## 独立検証
 
-When gates are green, delegate verification to the `factory-verifier` subagent using the
-Agent tool. Give it the queue item, branch name, and verified base SHA, **not your account
-of what you did.** The verifier reads the diff cold and reaches its own verdict.
+ゲートが成功したら、Agent ツールを使い `factory-verifier` サブエージェントに検証を委任します。渡すのはキュー項目、ブランチ名、確認済みのベース SHA であり、**自分が何をしたかという説明ではありません。** 検証担当は先入観なしで差分を読み、自分で判定します。
 
-You may not skip this step because you are confident. Confidence is what it is checking.
+自信があることを理由に、この工程を省略してはいけません。その自信こそが検証対象です。
 
-If the verifier returns `verdict: rejected`, fix what it names and re-run gates and
-commit the corrected diff before verification. After two rejections on the same item, stop and hand it to a human. Do not
-argue with the verifier in a third pass; two failed attempts means the item was misclassified.
+検証担当が `verdict: rejected` を返したら、指摘箇所を修正し、ゲートを再実行して修正後の差分をコミットしてから再検証します。同じ項目で2回却下されたら停止し、人間に戻します。3回目に検証担当と言い争ってはいけません。2回の失敗は、その項目の分類が誤っていたことを意味します。
 
-The verifier uses `./.factory/scripts/prove-test.sh` from a clean committed branch for the
-negative test. Do not substitute `git stash`.
+否定テストには、クリーンでコミット済みのブランチから `./.factory/scripts/prove-test.sh` を使います。`git stash` で代用してはいけません。
 
-## Pull request
+## PR
 
-Open a PR only after gates are green and the verifier returns `verdict: accepted`.
+ゲートが成功し、検証担当が `verdict: accepted` を返して初めて PR を作成します。
 
-PR body template. Fill every field. Empty fields are how unreviewed work gets merged.
+PR 本文のテンプレートです。すべての欄を埋めてください。空欄があると、レビューされていない作業がマージされる原因になります。
 
 ```markdown
-## What
-<one sentence>
+## 変更内容
+<1文>
 
-## Queue item
-FQ-<n> - <link to issue>
-done_when: <copied verbatim from the queue>
+## キュー項目
+FQ-<n> - <issue へのリンク>
+done_when: <キューからそのままコピー>
 
-## Why this is safe
-<the thing a reviewer would otherwise have to work out for themselves>
+## 安全である理由
+<そうでなければレビュアーが自分で調べる必要があること>
 
-## Gates
-<paste the FACTORY_GATES line verbatim>
-Skipped gates: <list, or "none">
+## ゲート
+<FACTORY_GATES 行をそのまま貼り付け>
+スキップしたゲート: <一覧、または "none">
 
-## Verification
-Verifier verdict: accepted
-<the verifier's one-line reasoning>
+## 検証
+検証担当の判定: accepted
+<検証担当の理由を1行で>
 
-## Human read required
-<yes + reason, or no>
+## 人間の確認が必要か
+<yes と理由、または no>
 
-## Not done
-<anything in scope you deliberately left out, or "nothing">
+## 未実施
+<スコープ内だが意図的に省いたこと、または "nothing">
 ```
 
-Mark the PR as **draft** if any of these hold:
+以下のいずれかに該当する場合は、PR を**ドラフト**にします。
 
-- the change touches a load-bearing path
-- an existing test file was modified
-- a gate was skipped
-- the verifier accepted with reservations
+- 重要な経路に触れる変更
+- 既存のテストファイルを変更した
+- ゲートをスキップした
+- 検証担当が留保付きで受け入れた
 
-Then replace the source issue's `factory:in-progress` label with
-`factory:awaiting-review`, link the PR on the issue, and write one unique `implement` run
-record under `docs/factory/runs/`.
+次に、元 issue の `factory:in-progress` ラベルを `factory:awaiting-review` に置き換え、issue に PR をリンクし、`docs/factory/runs/` に一意の `implement` 実行記録を作成します。
 
-If the run stops after claiming the issue, move it to the correct live state before ending:
+項目を確保した後に実行が停止する場合は、終了前に現在の状態を適切に戻します。
 
-- ambiguity or missing human decision -> `factory:needs-info`
-- load-bearing or scope decision -> `factory:ready-to-spec`
-- transient infrastructure failure with no code PR -> `factory:ready-to-implement`
+- 曖昧さ、または人間の判断不足 → `factory:needs-info`
+- 重要な経路、またはスコープの判断 → `factory:ready-to-spec`
+- コードの PR がなく、一時的なインフラ障害 → `factory:ready-to-implement`
 
-Never leave an issue `factory:in-progress` without a run record explaining who owns it.
+所有者を説明する実行記録なしに、issue を `factory:in-progress` のまま残してはいけません。
 
-## What you never do
+## 絶対に行わないこと
 
-- Merge. Ever. On any tier. The merge decision is the human's, and it is the one place
-  accountability actually lives.
-- Modify `docs/factory/CHARTER.md`.
-- Modify anything under `.claude/`.
-- Modify `.factory/gates.conf`, `AGENTS.md`, `.agents/`, or `.codex/`.
-- Pick up a second item.
+- マージ。どの階層でも、決して行いません。マージ判断は人間のものであり、説明責任が実際に存在する唯一の地点です。
+- `docs/factory/CHARTER.md` の変更。
+- `.claude/` 以下の変更。
+- `.factory/gates.conf`、`AGENTS.md`、`.agents/`、`.codex/` の変更。
+- 2件目の項目への着手。

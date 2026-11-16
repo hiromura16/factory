@@ -1,91 +1,76 @@
 ---
 name: factory-spec
-description: Turn a ready-to-spec queue item into an approved plan through explicit human gates. Use when an item needs scope decided before code exists, when planning a feature, or before starting a migration. Runs interactively - not for unattended routines.
+description: ready-to-spec のキュー項目を、人間による明示的なゲートを通じて承認済み計画に変えます。コードを書く前にスコープを決める必要がある項目、機能計画、移行着手前に使用します。対話実行用で、無人ルーチンには使いません。
 ---
 
-# Factory spec
+# Factory の仕様策定
 
-This skill exists because the cheapest place to fix a decision is before any code encodes
-it. Once a model has written a thousand lines, changing direction is expensive and every
-instinct is to patch instead.
+判断を修正するコストが最も小さいのは、それをコードに埋め込む前です。そのためにこのスキルがあります。モデルが千行書いてからの方針転換は高くつき、つい継ぎ当てで済ませたくなります。
 
-**This skill is interactive.** It stops and waits for a human. Do not run it inside an
-unattended routine; a routine that approves its own spec has no gates at all.
+**このスキルは対話形式です。** 停止して人間を待ちます。無人ルーチン内では実行しないでください。自分で自分の仕様を承認するルーチンには、ゲートがないも同然です。
 
-Read `docs/factory/CONTRACT.md` and `docs/factory/CHARTER.md` before gate 1.
+ゲート1の前に `docs/factory/CONTRACT.md` と `docs/factory/CHARTER.md` を読みます。
 
-## Gates
+## ゲート
 
-Four, in order. Stop at each one. Never merge two gates into a single pass. Never proceed
-on an inferred approval: "looks good" on gate 1 is not approval of gate 2.
+順番に4つあります。各ゲートで停止してください。2つを1回にまとめてはいけません。承認を推測して続行しないでください。ゲート1への「よさそう」はゲート2の承認ではありません。
 
-Write each gate's output into `docs/factory/specs/FQ-<n>/` as its own file, and track
-approvals in `docs/factory/specs/FQ-<n>/00-status.md`.
+各ゲートの出力を `docs/factory/specs/FQ-<n>/` 内の別々のファイルに書き、承認を `docs/factory/specs/FQ-<n>/00-status.md` で追跡します。
 
-### Gate 1 - Product (`01-product.md`)
+### ゲート1: 製品（`01-product.md`）
 
-No technical content whatsoever. If you find yourself naming a file or a function, you are
-in the wrong gate.
+技術的な内容は一切含めません。ファイルや関数の名前を書き始めたら、扱うゲートを間違えています。
 
-- The user problem, stated as a person's problem
-- What success looks like, measurably
-- A short announcement written as if the change already shipped
-- Plain HTML mockups for any screen involved, in `mockups/`
-- **What we are deliberately not doing**
+- 利用者の問題を、人の問題として表現する
+- 測定可能な成功の姿
+- 変更がすでに出荷された体裁の短い告知文
+- 関係する画面のプレーン HTML モックアップを `mockups/` に置く
+- **意図的に行わないこと**
 
-That last item is the one people skip and the one that saves the most time. It is also
-where the kill decision lives: if the honest answer to "should this exist" is no, this gate
-is where that is cheap to say.
+最後の項目はよく省かれますが、最も時間を節約します。また、作らない判断をする場所でもあります。「これは存在すべきか」への率直な答えが「いいえ」なら、このゲートでなら低コストで言えます。
 
-**STOP. Ask for approval.**
+**停止し、承認を求めてください。**
 
-### Gate 2 - Architecture (`02-architecture.md`)
+### ゲート2: アーキテクチャ（`02-architecture.md`）
 
-- Which existing systems and modules this touches
-- New endpoints, data structures, and their shapes
-- The end-to-end call flow, in order
-- External dependencies, and whether each is genuinely required
-- Which `LOAD_BEARING` paths are involved
-- What could break elsewhere
+- 影響する既存システムとモジュール
+- 新しいエンドポイント、データ構造、その形
+- 最初から最後までの呼び出しフローを順番に
+- 外部依存関係と、それぞれが本当に必要か
+- 関係する `LOAD_BEARING` の経路
+- ほかの場所で壊れ得るもの
 
-**STOP. Ask for approval.** For anything touching a load-bearing path, also run the
-`factory-critic` subagent against this document before asking, and include its output.
+**停止し、承認を求めてください。** 重要な経路に触れる場合は、依頼する前にこの文書を `factory-critic` サブエージェントにもレビューさせ、その出力を含めます。
 
-### Gate 3 - Program design (`03-design.md`)
+### ゲート3: プログラム設計（`03-design.md`）
 
-- Exact file paths, new and modified
-- Type signatures and function contracts, **no implementations**
-- The call stack for the main flow
-- The test list: what will be tested and what each test proves
-- **The three decisions you are least confident about**
+- 新規・変更する正確なファイルパス
+- 型シグネチャと関数の契約。**実装は含めない**
+- 主なフローの呼び出しスタック
+- テスト一覧。何をテストし、各テストが何を証明するか
+- **最も確信が薄い判断を3つ**
 
-That last section is the highest-value part of this gate. It is where a reviewer can
-intervene before the uncertainty is buried under working code.
+最後の節が、このゲートで最も価値の高い部分です。不確実さが動くコードの下に埋もれる前に、レビュアーが介入できる場所です。
 
-**STOP. Ask for approval.**
+**停止し、承認を求めてください。**
 
-### Gate 4 - Slices (`04-slices.md`)
+### ゲート4: 実装単位（`04-slices.md`）
 
-Decompose into vertical slices. Each slice must be independently shippable, independently
-testable, and small enough to review in one sitting.
+垂直方向の実装単位に分けます。各単位は独立して出荷・テストでき、一度でレビューできる小ささでなければなりません。
 
-- **Slice 0 is a tracer bullet**: end to end, mostly mocked, proving the shape works.
-- Each later slice replaces one mock with real behavior.
-- Each slice gets its own queue entry with its own `done_when`.
+- **単位0はトレーサーバレットです**。大部分をモックにして最初から最後まで通し、全体の形が機能することを証明します。
+- 以降の各単位で、モックを1つずつ実際の動作に置き換えます。
+- 各単位に固有の `done_when` を持つキュー項目を作ります。
 
-Once approved, create or update one GitHub issue per slice and apply
-`factory:ready-to-implement`. Create or update its `factory-handoff:v1` comment with the
-approved `done_when`, expected files, gate level, and confidence. Also write each slice into
-the `QUEUE.md` snapshot. The issue label and comment are the handoff back to the unattended
-part of the factory.
+承認後、各単位につき GitHub issue を1つ作成または更新し、`factory:ready-to-implement` を付けます。`factory-handoff:v1` コメントを作成または更新し、承認済みの `done_when`、想定ファイル、ゲートレベル、確信度を含めます。また、各単位を `QUEUE.md` スナップショットにも記録します。issue ラベルとコメントが Factory の無人部分への引き継ぎです。
 
-**STOP. Ask for approval before writing the queue entries.**
+**停止し、キュー項目を書く前に承認を求めてください。**
 
-After the approved handoff, write a unique `spec` run record under `docs/factory/runs/`.
+承認済みの引き継ぎ後、`docs/factory/runs/` に一意の `spec` 実行記録を書きます。
 
-## Status file
+## 状態ファイル
 
-`00-status.md` tracks state so the spec survives a context reset or a week away:
+`00-status.md` は状態を追跡し、コンテキストのリセットや1週間の中断があっても仕様を維持します。
 
 ```
 item: FQ-<n>
@@ -95,29 +80,24 @@ gate_3_design: not-started
 gate_4_slices: not-started
 slices_completed: 0 / ?
 open_questions:
-  - <anything blocking, with who owns the answer>
+  - <阻害事項と、誰が回答を担当するか>
 ```
 
-## For migrations specifically
+## 移行の場合の追加事項
 
-If this spec covers a migration, gate 2 must answer one question before anything else:
+移行を扱う仕様では、ゲート2で何より先に1つの問いに答えます。
 
-**What is the oracle?**
+**正しさを判定する基準（オラクル）は何ですか。**
 
-An old or unlaunched project usually has the thinnest test coverage in the portfolio, which
-means a migration can compile, typecheck, pass every existing test, and still behave
-differently. Green does not mean equivalent.
+古いプロジェクトや未公開のプロジェクトは、通常、保有する中でもテストが最も手薄です。そのため、移行でコンパイル、型検査、既存の全テストが成功しても、動作が変わり得ます。成功は同等性を意味しません。
 
-So the first slices are not migration slices:
+したがって、最初の実装単位は移行そのものではありません。
 
-1. Make it build on the current stack
-2. Make it typecheck
-3. Pin current behavior with characterization tests and golden-master snapshots
-4. **Only then** migrate, wide and fast, against the oracle you just built
+1. 現在の技術構成でビルドできるようにする
+2. 型検査を通す
+3. 特性テストとゴールデンマスタースナップショットで、現在の動作を固定する
+4. **その後で初めて**、作った判定基準に照らして広く速く移行する
 
-This inverts the usual reading of back-pressure. Instead of accepting the verification
-budget you have and limiting autonomy to match, you go build a bigger budget first and
-claim the autonomy it buys. Each of those four steps is itself a clean factory job.
+これは受け入れ抑制の通常の解釈を逆転させます。今ある検証能力を受け入れて自律性をその範囲に制限するのではなく、先に検証能力を増やし、それによって得られる自律性を使います。この4段階は、それぞれ単独で明確な Factory の作業です。
 
-If gate 2 cannot name the oracle, the migration is not ready and no amount of agent
-throughput fixes that.
+ゲート2で判定基準を示せなければ移行の準備はできておらず、エージェントの処理量をどれほど増やしても解決しません。

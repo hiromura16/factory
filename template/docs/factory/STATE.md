@@ -1,24 +1,24 @@
-# Factory state snapshot
+# Factory状態のスナップショット
 
-Human-readable summary of the latest known factory state. Routines do not append here.
-Each run writes a unique file under `docs/factory/runs/`, and `/factory` reads those records
-along with live GitHub labels.
+最新の既知のFactory状態を、人間向けに要約します。ルーチンはここに追記しません。
+各実行は `docs/factory/runs/` に一意のファイルを書き、
+`/factory` は実際のGitHubラベルと併せてそれらの記録を読みます。
 
-This file can be refreshed deliberately when a compact summary is useful. It is not a
-coordination lock and may be stale while run-record PRs are still open.
+簡潔な要約が必要なときに、意図的にこのファイルを更新できます。
+これは調整用のロックではなく、実行記録のPRが未完了の間は古い状態になり得ます。
 
-**Run records include what was checked and found clean, not only findings.** A silent record
-is ambiguous between "nothing was wrong" and "the check never ran".
+**実行記録には、問題点だけでなく、何を確認して問題がなかったかも含めます。**
+何も書いていない記録では、「問題がなかった」のか「チェックを実行していない」のか分かりません。
 
 ---
 
-## Example snapshot (replace during setup)
+## スナップショットの例（設定時に置き換えてください）
 
-- last successful triage: none
-- last successful monitor: none
-- ready to implement: 0
-- in progress: 0
-- awaiting review: 0
-- charter gaps: none known
+- 最後に成功したトリアージ: なし
+- 最後に成功した監視: なし
+- 実装可能: 0
+- 作業中: 0
+- レビュー待ち: 0
+- 憲章の不足: 現時点で判明しているものはなし
 
 ---

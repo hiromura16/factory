@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# install.sh - copy the factory template into a target repository.
+# install.sh - ファクトリーテンプレートを対象リポジトリへコピーします。
 #
-#   ./install.sh              # install into the current directory
-#   ./install.sh /path/repo   # install into a specific repo
-#   ./install.sh --dry-run    # show what would happen
+#   ./install.sh              # 現在のディレクトリにインストール
+#   ./install.sh /path/repo   # 指定リポジトリにインストール
+#   ./install.sh --dry-run    # 実行予定の操作を表示
 #   ./install.sh --with-issue-trigger /path/repo
 #
-# Never overwrites an existing file. Re-running is safe and reports what it skipped.
+# 既存ファイルは上書きしません。安全に再実行でき、スキップした内容を表示します。
 
 set -euo pipefail
 
@@ -20,25 +20,25 @@ for arg in "$@"; do
     --dry-run) DRY=1 ;;
     --with-issue-trigger) WITH_ISSUE_TRIGGER=1 ;;
     -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    -*) echo "error: unknown option: $arg" >&2; exit 2 ;;
+    -*) echo "エラー: 未知のオプション: $arg" >&2; exit 2 ;;
     *)
-      [ -z "$TARGET" ] || { echo "error: specify one target directory" >&2; exit 2; }
+      [ -z "$TARGET" ] || { echo "エラー: 対象ディレクトリは1つ指定してください" >&2; exit 2; }
       TARGET="$arg"
       ;;
   esac
 done
 
 TARGET="${TARGET:-$PWD}"
-[ -d "$TARGET" ] || { echo "error: no such directory: $TARGET" >&2; exit 1; }
+[ -d "$TARGET" ] || { echo "エラー: ディレクトリが存在しません: $TARGET" >&2; exit 1; }
 TARGET="$(cd "$TARGET" && pwd)"
 
 git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1 || {
-  echo "warning: $TARGET is not a git repository." >&2
-  echo "         Cloud sessions clone from a GitHub remote, so the factory needs one." >&2
+  echo "警告: $TARGET はGitリポジトリではありません。" >&2
+  echo "         クラウドセッションはGitHubリモートからクローンするため、リモートが必要です。" >&2
 }
 
-echo "factory template -> $TARGET"
-[ "$DRY" -eq 1 ] && echo "(dry run)"
+echo "ファクトリーテンプレート -> $TARGET"
+[ "$DRY" -eq 1 ] && echo "（ドライラン）"
 echo
 
 COPIED=0; SKIPPED=0
@@ -46,16 +46,16 @@ COPIED=0; SKIPPED=0
 copy() {
   local rel="$1" src="$SRC/$1" dst="$TARGET/$1"
   if [ -e "$dst" ]; then
-    printf '  skip    %s (exists)\n' "$rel"; SKIPPED=$((SKIPPED+1)); return
+    printf '  スキップ %s（既存）\n' "$rel"; SKIPPED=$((SKIPPED+1)); return
   fi
-  printf '  create  %s\n' "$rel"; COPIED=$((COPIED+1))
+  printf '  作成     %s\n' "$rel"; COPIED=$((COPIED+1))
   [ "$DRY" -eq 1 ] && return
   mkdir -p "$(dirname "$dst")"
   cp "$src" "$dst"
 }
 
-# Walk the template. Files starting with a dot are included.
-# Process substitution rather than a pipe, so the counters survive the loop.
+# テンプレートを走査します。ドットで始まるファイルも含めます。
+# カウンターをループ後も保持するため、パイプではなくプロセス置換を使います。
 while IFS= read -r rel; do
   if [ "$rel" = ".github/workflows/factory-fire.yml" ] && [ "$WITH_ISSUE_TRIGGER" -eq 0 ]; then
     continue
@@ -73,49 +73,50 @@ fi
 
 cat <<'EOF'
 
-Next, in order:
+次の順序で進めてください:
 
-  Setup guide: docs/factory/README.md
+  セットアップガイド: docs/factory/README.md
 
   1. docs/factory/CHARTER.md
-     Set TIER, LOAD_BEARING globs, and AUTOMATABLE. This is the only step that
-     decides what work the factory may attempt; set CHARTER_STATUS to ready only
-     after reviewing every section.
+     TIER、LOAD_BEARINGのglob、AUTOMATABLEを設定します。
+     ファクトリーが扱える作業を決める唯一の手順です。
+     全項目を確認してからCHARTER_STATUSをreadyにしてください。
 
-  2. .factory/gates.conf and ./.claude/scripts/gates.sh full
-     Confirm the required gates match this repo. Required skips produce
-     MISCONFIGURED and block unattended work.
+  2. .factory/gates.conf と ./.claude/scripts/gates.sh full
+     必須ゲートがこのリポジトリに合っていることを確認します。
+     必須ゲートをスキップするとMISCONFIGUREDとなり、無人実行を阻止します。
 
   3. CLAUDE.md
-     Replace the <PROJECT NAME> header and the commands block. Keep the factory
-     rules section as-is.
+     <PROJECT NAME>見出しとコマンドブロックを置き換えます。
+     ファクトリールールの節はそのまま維持してください。
 
-  4. Bootstrap and diagnose:
-       ./.factory/scripts/bootstrap-github.sh        # preview labels
+  4. 初期設定と診断:
+       ./.factory/scripts/bootstrap-github.sh        # ラベルのプレビュー
        ./.factory/scripts/bootstrap-github.sh --apply
        ./.factory/scripts/doctor.sh
 
-     Configure a GitHub ruleset or branch protection for the default branch.
-     Hooks are defense in depth and cannot replace repository-side enforcement.
+     デフォルトブランチにGitHubルールセットまたはブランチ保護を設定します。
+     フックは多層防御であり、リポジトリ側の強制措置の代わりにはなりません。
 
-  5. Commit and PUSH.
-     Cloud sessions clone from the remote, not your local checkout.
+  5. コミットしてpushします。
+     クラウドセッションはローカルではなくリモートからクローンします。
 
-  6. Local dry run:
+  6. ローカルのドライラン:
        claude
        /factory
-       "Run the factory-triage skill but report only. Write nothing."
+       "factory-triageスキルを報告のみで実行してください。何も書き込まないでください。"
 
-  7. Cloud dry run:
-       claude --cloud "Run the factory-triage skill and report what you would do.
-                       Write nothing."
+  7. クラウドのドライラン:
+       claude --cloud "factory-triageスキルを実行し、予定する作業を報告してください。
+                       何も書き込まないでください。"
 
-  8. Create routine 1 only. See ROUTINES.md. Let it run for a few days before
-     adding the rest.
+  8. ルーチン1だけを作成します。ROUTINES.mdを参照してください。
+     数日間運用してから、残りを追加します。
 
-  The instant issue trigger is optional and is not installed by default. Re-run
-  this installer with --with-issue-trigger if scheduled polling is too slow.
+  即時Issueトリガーは任意で、既定ではインストールしません。
+  定期ポーリングでは遅い場合だけ、--with-issue-triggerを付けて再実行してください。
+
 EOF
 
 echo
-echo "created: $COPIED   skipped: $SKIPPED"
+echo "作成: $COPIED   スキップ: $SKIPPED"

@@ -1,44 +1,43 @@
-# GitHub setup
+# GitHubの設定
 
-GitHub carries the factory's live queue and its merge boundary. This page records the
-repository-side setup that cannot be inferred safely from Markdown alone.
+GitHubはFactoryの実際のキューとマージの制御境界を担います。
+このページには、Markdownだけでは安全に推測できないリポジトリ側の設定を記録します。
 
-## Queue labels
+## キューラベル
 
-Preview and create the labels:
+ラベルをプレビューして作成します。
 
 ```bash
 ./.factory/scripts/bootstrap-github.sh
 ./.factory/scripts/bootstrap-github.sh --apply
 ```
 
-Queue-state labels are mutually exclusive. `factory:monitor` is provenance and may coexist
-with one issue state. `factory:verified` and `factory:rejected` belong on pull requests.
+キュー状態ラベルは相互排他的です。`factory:monitor` は由来を示し、
+Issueの状態ラベル1つと併存できます。`factory:verified` と `factory:rejected` はPRに付けます。
 
-## Default-branch rules
+## デフォルトブランチのルール
 
-Create a GitHub ruleset or branch-protection rule for the actual default branch. At
-minimum:
+実際のデフォルトブランチにGitHubルールセットまたはブランチ保護ルールを作成します。
+最低限、次を設定してください。
 
-- require changes to arrive through a pull request
-- block force pushes and branch deletion
-- do not grant the account used by unattended agents a bypass
-- require the repository's CI checks once they exist
+- 変更はPR経由を必須とする
+- force pushとブランチ削除を禁止する
+- 無人エージェントが使うアカウントに迂回権限を与えない
+- リポジトリのCIチェックが用意されたら、それを必須とする
 
-Whether you require human approvals depends on the repository tier and team. The factory
-itself never approves or merges, even when GitHub would permit it.
+人間の承認を必須にするかは、リポジトリの区分とチームによります。
+GitHubが許可していても、Factory自身は承認やマージを行いません。
 
-The committed Claude and Codex hooks block common shell routes to merging and direct
-pushes. They cannot cover every hosted tool or API path, so a repository-side rule remains
-the enforcement boundary.
+コミットされたClaudeとCodexのフックは、一般的なシェル経由のマージや直接pushを阻止します。
+ホスト側のツールやAPIのすべてをカバーすることはできないため、
+強制力のある境界はリポジトリ側のルールです。
 
-## Claim branches
+## 担当確保用ブランチ
 
-Implementation runs claim work through `claude/fq-<issue-number>`. The first run pushes a
-unique empty claim commit without force. A later run starts from the same base with a
-different claim commit, so Git rejects its non-fast-forward push.
+実装実行は `claude/fq-<issue-number>` で作業の担当を確保します。
+最初の実行は一意の空コミットをforceなしでpushします。後続の実行は同じベースから
+異なる担当確保コミットを作るため、Gitがnon-fast-forwardのpushを拒否します。
 
-If a claim is stale, inspect the issue, branch, cloud session, and latest run record. A
-human may then delete or recover the branch. Monitoring reports stale claims but never
-steals them automatically.
-
+担当確保が古くなっている場合は、Issue、ブランチ、クラウドセッション、最新の実行記録を調べます。
+その後、人間がブランチを削除または復旧できます。監視は古い担当確保を報告しますが、
+自動で奪い取ることはありません。
